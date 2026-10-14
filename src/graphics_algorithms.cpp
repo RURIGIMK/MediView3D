@@ -1,6 +1,7 @@
 #include "mediview/graphics_algorithms.hpp"
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 namespace mediview {
 namespace {
