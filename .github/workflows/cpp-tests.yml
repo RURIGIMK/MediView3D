@@ -1,0 +1,19 @@
+name: C++ graphics tests
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure pure C++ targets
+        run: cmake -S . -B build -DMEDIVIEW_BUILD_OPENGL_DEMO=OFF
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
