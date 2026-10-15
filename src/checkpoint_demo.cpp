@@ -90,8 +90,28 @@ namespace {
 
     void drawLinePanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Lines");
-        pixels(ddaLine({x+25, y+35}, {x+w*.42, y+h-35}), .2f, .85f, .67f);
-        pixels(bresenhamLine(int(x+w*.55), int(y+35), int(x+w-25), int(y+h-35)), .36f, .55f, 1);
+        // Each half uses identical local geometry for a fair visual comparison.
+        const double half=w*.5;
+        const double left=20, right=half-20;
+        const double bottom=y+40, height=h-85;
+        const Point2D starts[]={
+            {left, bottom},
+            {left, bottom+height*.40},
+            {left, bottom+height*.58},
+            {left, bottom+height}
+        };
+        const Point2D ends[]={
+            {right, bottom+height*.25}, // Positive slope.
+            {right, bottom+height*.40}, // Horizontal.
+            {left, bottom+height*.80},  // Vertical.
+            {right, bottom+height*.58}  // Negative slope.
+        };
+        for (int i=0; i<4; ++i) {
+            pixels(ddaLine({x+starts[i].x, starts[i].y},
+                           {x+ends[i].x, ends[i].y}), .2f, .85f, .67f);
+            pixels(bresenhamLine(int(x+half+starts[i].x), int(starts[i].y),
+                                 int(x+half+ends[i].x), int(ends[i].y)), .36f, .55f, 1);
+        }
         legend(x+14, y+10, "DDA", .2f, .85f, .67f);
         legend(x+w*.55, y+10, "Bresenham", .36f, .55f, 1);
     }
