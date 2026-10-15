@@ -181,11 +181,25 @@ namespace {
 
     void drawCirclePanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Circles and ellipses");
-        auto c=midpointCircle(int(x+w*.32), int(y+h*.53), int(std::min(w, h)*.23));
+        const int cx=int(x+w*.32), cy=int(y+h*.53);
+        const int radius=int(std::min(w, h)*.23);
+        // Axes and diagonals divide the circle into its eight symmetric octants.
+        const float guide=.38f;
+        line({{double(cx-radius), double(cy)}, {double(cx+radius), double(cy)}}, guide, guide, guide, 1);
+        line({{double(cx), double(cy-radius)}, {double(cx), double(cy+radius)}}, guide, guide, guide, 1);
+        const double diagonal=radius*.70710678118;
+        line({{cx-diagonal, cy-diagonal}, {cx+diagonal, cy+diagonal}}, guide, guide, guide, 1);
+        line({{cx-diagonal, cy+diagonal}, {cx+diagonal, cy-diagonal}}, guide, guide, guide, 1);
+        auto c=midpointCircle(cx, cy, radius);
+        glPointSize(1.0f);
         glBegin(GL_POINTS);
         color(.25f, .75f, 1);
         for (auto p:c)glVertex2d(p.x, p.y);
         glEnd();
+        point(cx, cy, 1, 1, 1, 5);
+        color(.7f, .78f, .88f);
+        bitmap(float(cx-radius), float(cy-radius-16), "8 octants", 1.0f);
+        glPointSize(1.0f);
         auto e=midpointEllipse(int(x+w*.72), int(y+h*.53), int(w*.16), int(h*.26));
         glBegin(GL_POINTS);
         color(1, .65f, .3f);
