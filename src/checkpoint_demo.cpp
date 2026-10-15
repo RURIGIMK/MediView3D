@@ -45,7 +45,7 @@ void drawAnatomy(double x,double y,double w,double h){drawPanel(x,y,w,h,"Anatomy
 void render(){glClearColor(.035f,.045f,.07f,1);glClear(GL_COLOR_BUFFER_BIT);glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,W,0,H,-1,1);glMatrixMode(GL_MODELVIEW);glLoadIdentity();if(grid){color(.08f,.10f,.14f);glBegin(GL_LINES);for(int x=0;x<W;x+=25){glVertex2d(x,0);glVertex2d(x,H);}for(int y=0;y<H;y+=25){glVertex2d(0,y);glVertex2d(W,y);}glEnd();}
  panel(16,H-58,W-32,42);
  double margin=18,gap=14,top=H-78,bottom=18,pw=(W-2*margin-2*gap)/3,ph=(top-bottom-2*gap)/2;
- drawLinePanel(margin,bottom+ph+gap,pw,ph);drawPolygonPanel(margin+pw+gap,bottom+ph+gap,pw,ph);drawCirclePanel(margin+2*(pw+gap),bottom+ph+gap,pw,ph);drawCurvePanel(margin,bottom,pw,ph);drawAnatomy(margin+pw+gap,bottom,pw,ph);drawPanel(margin+2*(pw+gap),bottom,pw,ph); }
+ drawLinePanel(margin,bottom+ph+gap,pw,ph);drawPolygonPanel(margin+pw+gap,bottom+ph+gap,pw,ph);drawCirclePanel(margin+2*(pw+gap),bottom+ph+gap,pw,ph);drawCurvePanel(margin,bottom,pw,ph);drawAnatomy(margin+pw+gap,bottom,pw,ph);drawPanel(margin+2*(pw+gap),bottom,pw,ph,"Overview"); }
 void resize(GLFWwindow*,int w,int h){W=std::max(1,w);H=std::max(1,h);glViewport(0,0,W,H);}
 void key(GLFWwindow* w,int k,int,int action,int){if(action==GLFW_PRESS){if(k==GLFW_KEY_ESCAPE)glfwSetWindowShouldClose(w,GLFW_TRUE);if(k==GLFW_KEY_G)grid=!grid;}}
 }
