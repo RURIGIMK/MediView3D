@@ -9,3 +9,6 @@
 *.so
 *.dylib
 .DS_Store
+.claude/
+CLAUDE.md
+CLAUDE.local.md
