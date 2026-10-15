@@ -9,6 +9,7 @@ using namespace mediview;
 namespace {
     int W=1280, H=760;
     bool grid=true;
+    int lineExample=0; // All, positive slope, horizontal, vertical, negative slope.
     void color(float r, float g, float b) {
         glColor3f(r, g, b);
     }
@@ -90,10 +91,14 @@ namespace {
 
     void drawLinePanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Lines");
+        const char* examples[]={"L  All examples", "L  Positive slope", "L  Horizontal",
+                                "L  Vertical", "L  Negative slope"};
+        color(.7f, .78f, .88f);
+        bitmap(float(x+14), float(y+h-38), examples[lineExample], 1.0f);
         // Each half uses identical local geometry for a fair visual comparison.
         const double half=w*.5;
         const double left=20, right=half-20;
-        const double bottom=y+40, height=h-85;
+        const double bottom=y+40, height=h-100;
         const Point2D starts[]={
             {left, bottom},
             {left, bottom+height*.40},
@@ -107,6 +112,7 @@ namespace {
             {right, bottom+height*.58}  // Negative slope.
         };
         for (int i=0; i<4; ++i) {
+            if (lineExample!=0 && i!=lineExample-1) continue;
             pixels(ddaLine({x+starts[i].x, starts[i].y},
                            {x+ends[i].x, ends[i].y}), .2f, .85f, .67f);
             pixels(bresenhamLine(int(x+half+starts[i].x), int(starts[i].y),
@@ -235,6 +241,7 @@ namespace {
         if (action==GLFW_PRESS) {
             if (k==GLFW_KEY_ESCAPE)glfwSetWindowShouldClose(w, GLFW_TRUE);
             if (k==GLFW_KEY_G)grid=!grid;
+            if (k==GLFW_KEY_L)lineExample=(lineExample+1)%5;
         }
     }
 }
