@@ -52,6 +52,18 @@ namespace {
      const char* chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";glBegin(GL_QUADS);for(;*str;++str){char c=*str;if(c>='a'&&c<='z')c=char(c-32);const char*p=std::strchr(chars,c);if(p){int n=int(p-chars);for(int j=0;j<7;++j)for(int i=0;i<5;++i)if(g[n][j]&(1<<(4-i))){float xx=x+i*scale,yy=y+(6-j)*scale;glVertex2f(xx,yy);glVertex2f(xx+scale*.8f,yy);glVertex2f(xx+scale*.8f,yy+scale*.8f);glVertex2f(xx,yy+scale*.8f);}}x+=6*scale;}glEnd();
     }
 
+    // Match each label and swatch to the colour used for its geometry.
+    void legend(double x, double y, const char* label, float r, float g, float b) {
+        color(r, g, b);
+        glBegin(GL_QUADS);
+        glVertex2d(x, y);
+        glVertex2d(x+8, y);
+        glVertex2d(x+8, y+8);
+        glVertex2d(x, y+8);
+        glEnd();
+        bitmap(float(x+14), float(y), label, 1.0f);
+    }
+
     void drawPanel(double x, double y, double w, double h, const char* title) {
         panel(x, y, w, h);
         color(.42f, .48f, .58f);
@@ -69,6 +81,8 @@ namespace {
         drawPanel(x, y, w, h, "Lines");
         line(ddaLine({x+25, y+35}, {x+w*.42, y+h-35}), .2f, .85f, .67f, 2);
         line(bresenhamLine(int(x+w*.55), int(y+35), int(x+w-25), int(y+h-35)), .36f, .55f, 1, 2);
+        legend(x+14, y+10, "DDA", .2f, .85f, .67f);
+        legend(x+w*.55, y+10, "Bresenham", .36f, .55f, 1);
     }
 
     void drawPolygonPanel(double x, double y, double w, double h) {
@@ -93,6 +107,10 @@ namespace {
         glVertex2d(r.left, r.top);
         glEnd();
         polygon(clipped, .2f, .9f, .67f);
+        legend(x+14, y+23, "Original", .95f, .55f, .24f);
+        legend(x+w*.5, y+23, "Clip window", .3f, .65f, 1);
+        legend(x+14, y+10, "Clipped", .2f, .9f, .67f);
+        legend(x+w*.5, y+10, "Scanline fill", .12f, .42f, .32f);
     }
 
     void drawCirclePanel(double x, double y, double w, double h) {
@@ -107,6 +125,8 @@ namespace {
         color(1, .65f, .3f);
         for (auto p:e)glVertex2d(p.x, p.y);
         glEnd();
+        legend(x+14, y+10, "Midpoint circle", .25f, .75f, 1);
+        legend(x+w*.5, y+10, "Midpoint ellipse", 1, .65f, .3f);
     }
 
     void drawCurvePanel(double x, double y, double w, double h) {
@@ -116,6 +136,9 @@ namespace {
         std::vector<Point2D> cp={{x+20, y+h*.25}, {x+w*.3, y+h*.7}, {x+w*.58, y+h*.35}, {x+w-20, y+h*.65}};
         line(catmullRomSpline(cp, 25), .55f, .58f, 1, 2);
         for (auto p:cp)point(p.x, p.y, 1, .7f, .3f, 6);
+        legend(x+14, y+23, "Bezier", .3f, .85f, .68f);
+        legend(x+w*.5, y+23, "Catmull Rom", .55f, .58f, 1);
+        legend(x+14, y+10, "Spline control points", 1, .7f, .3f);
     }
 
     void drawAnatomy(double x, double y, double w, double h) {
@@ -134,6 +157,8 @@ namespace {
         auto heart=bezierCurve({cx-18, cy-12}, {cx-35, cy+15}, {cx-5, cy+20}, {cx, cy+2}, 30);
         line(heart, 1, .35f, .4f, 2);
         line(bezierCurve({cx, cy+2}, {cx+25, cy+24}, {cx+35, cy-5}, {cx+4, cy-18}, 30), 1, .35f, .4f, 2);
+        legend(x+14, y+10, "Body", .7f, .78f, .88f);
+        legend(x+w*.5, y+10, "Heart curves", 1, .35f, .4f);
     }
 
     void render() {
