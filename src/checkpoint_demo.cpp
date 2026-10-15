@@ -29,6 +29,17 @@ namespace {
         glEnd();
     }
 
+    void pixels(const std::vector<Point2D>& samples, float r, float g, float b) {
+        color(r, g, b);
+        glPointSize(1.0f);
+        glBegin(GL_POINTS);
+        for (const auto& sample:samples) {
+            // Align integer raster coordinates to pixel centres.
+            glVertex2d(sample.x+0.5, sample.y+0.5);
+        }
+        glEnd();
+    }
+
     void polygon(const Polygon& p, float r, float g, float b) {
         if (p.size()<2)return;
         color(r, g, b);
@@ -79,7 +90,7 @@ namespace {
 
     void drawLinePanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Lines");
-        line(ddaLine({x+25, y+35}, {x+w*.42, y+h-35}), .2f, .85f, .67f, 2);
+        pixels(ddaLine({x+25, y+35}, {x+w*.42, y+h-35}), .2f, .85f, .67f);
         line(bresenhamLine(int(x+w*.55), int(y+35), int(x+w-25), int(y+h-35)), .36f, .55f, 1, 2);
         legend(x+14, y+10, "DDA", .2f, .85f, .67f);
         legend(x+w*.55, y+10, "Bresenham", .36f, .55f, 1);
