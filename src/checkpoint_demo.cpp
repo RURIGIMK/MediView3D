@@ -91,7 +91,7 @@ namespace {
     void drawLinePanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Lines");
         pixels(ddaLine({x+25, y+35}, {x+w*.42, y+h-35}), .2f, .85f, .67f);
-        line(bresenhamLine(int(x+w*.55), int(y+35), int(x+w-25), int(y+h-35)), .36f, .55f, 1, 2);
+        pixels(bresenhamLine(int(x+w*.55), int(y+35), int(x+w-25), int(y+h-35)), .36f, .55f, 1);
         legend(x+14, y+10, "DDA", .2f, .85f, .67f);
         legend(x+w*.55, y+10, "Bresenham", .36f, .55f, 1);
     }
