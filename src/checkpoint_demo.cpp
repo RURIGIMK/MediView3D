@@ -200,11 +200,22 @@ namespace {
         color(.7f, .78f, .88f);
         bitmap(float(cx-radius), float(cy-radius-16), "8 octants", 1.0f);
         glPointSize(1.0f);
-        auto e=midpointEllipse(int(x+w*.72), int(y+h*.53), int(w*.16), int(h*.26));
+        const int ex=int(x+w*.72), ey=int(y+h*.53);
+        const int rx=int(w*.16), ry=int(h*.26);
+        // The ellipse reflects across these two axes into four quadrants.
+        line({{double(ex-rx), double(ey)}, {double(ex+rx), double(ey)}}, guide, guide, guide, 1);
+        line({{double(ex), double(ey-ry)}, {double(ex), double(ey+ry)}}, guide, guide, guide, 1);
+        auto e=midpointEllipse(ex, ey, rx, ry);
         glBegin(GL_POINTS);
         color(1, .65f, .3f);
         for (auto p:e)glVertex2d(p.x, p.y);
         glEnd();
+        point(ex, ey, 1, 1, 1, 5);
+        glPointSize(1.0f);
+        color(.7f, .78f, .88f);
+        bitmap(float(ex+rx*.5), float(ey+7), "RX", 1.0f);
+        bitmap(float(ex+7), float(ey+ry*.5), "RY", 1.0f);
+        bitmap(float(ex-rx), float(ey-ry-16), "4 quadrants", 1.0f);
         legend(x+14, y+10, "Midpoint circle", .25f, .75f, 1);
         legend(x+w*.5, y+10, "Midpoint ellipse", 1, .65f, .3f);
     }
