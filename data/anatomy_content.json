@@ -1,0 +1,655 @@
+{
+  "meta": {
+    "project": "MediView3D",
+    "file_purpose": "Educational content for each structure drawn in the 3D prototype (src/main.cpp). Shown in the info panel when a user selects a structure.",
+    "version": "0.2",
+    "last_updated": "2026-10-15",
+    "reading_level": "Beginner (general public)",
+    "units": "Metric first; imperial in brackets where the source used imperial",
+    "disclaimer": "Simplified educational content for a graphics prototype. Not medical advice and not for clinical use.",
+    "field_guide": {
+      "summary": "2-3 short sentences. Always shown in the info panel.",
+      "location": "Where the structure sits in the body.",
+      "functions": "What it does. One short point each.",
+      "parts": "Main sub-parts a learner should know.",
+      "numbers": "Key figures, each tied to the source it came from.",
+      "did_you_know": "One memorable fact.",
+      "model_note": "How the 3D model simplifies the real structure.",
+      "sources": "Keys into the top-level 'sources' list (APA 7th)."
+    },
+    "status_values": {
+      "draft": "Written, not yet reviewed by a teammate",
+      "reviewed": "Checked by a teammate for clarity and accuracy",
+      "confirm_mapping": "Team must confirm which shape in the code this entry belongs to"
+    }
+  },
+  "sources": {
+    "openstax-ap2e": "Betts, J. G., Desaix, P., Johnson, E., Johnson, J. E., Korol, O., Kruse, D., Poe, B., Wise, J. A., Womble, M., & Young, K. A. (2022). Anatomy and physiology (2nd ed.). OpenStax. https://openstax.org/details/books/anatomy-and-physiology-2e",
+    "statpearls-vertebral-column": "DeSai, C., Reddy, V., & Agarwal, A. (2023). Anatomy, back, vertebral column. In StatPearls. StatPearls Publishing. https://www.ncbi.nlm.nih.gov/books/NBK525969/",
+    "statpearls-ribs": "Safarini, O. A., & Bordoni, B. (2023). Anatomy, thorax, ribs. In StatPearls. StatPearls Publishing. https://www.ncbi.nlm.nih.gov/books/NBK538328/",
+    "cc-skull": "Cleveland Clinic. (2025b, February 28). Skull: Anatomy & function. https://my.clevelandclinic.org/health/body/skull-anatomy",
+    "cc-spine": "Cleveland Clinic. (2023d, October 18). Spine: Anatomy, function, parts, segments & disorders. https://my.clevelandclinic.org/health/body/10040-spine-structure-and-function",
+    "cc-pelvis": "Cleveland Clinic. (2024c, September 24). Pelvis. https://my.clevelandclinic.org/health/body/pelvis",
+    "cc-humerus": "Cleveland Clinic. (2023a, January 3). Humerus (bone): Anatomy, location & function. https://my.clevelandclinic.org/health/body/24612-humerus",
+    "cc-ulnar-nerve": "Cleveland Clinic. (2025a, February 27). Ulnar nerve (funny bone): What is it, branches & function. https://my.clevelandclinic.org/health/body/21664-ulnar-nerve",
+    "cc-radius": "Cleveland Clinic. (2026c, August 4). Radius bone: What it is, anatomy, location & function. https://my.clevelandclinic.org/health/body/24528-radius",
+    "cc-ulna": "Cleveland Clinic. (2022d, December 9). Ulna (bone): Anatomy, location & function. https://my.clevelandclinic.org/health/body/24520-ulna",
+    "cc-hand-wrist": "Cleveland Clinic. (2023c, June 12). Anatomy of the hand & wrist: Bones, muscles & ligaments. https://my.clevelandclinic.org/health/body/25060-anatomy-of-the-hand-and-wrist",
+    "cc-bones": "Cleveland Clinic. (2025c, October 17). Bones: How many do humans have, types, anatomy & function. https://my.clevelandclinic.org/health/body/25176-bones",
+    "cc-femur": "Cleveland Clinic. (2022b, March 11). Femur (thighbone): Anatomy, function & common conditions. https://my.clevelandclinic.org/health/body/22503-femur",
+    "cc-tibia": "Cleveland Clinic. (2026a, January 19). Tibia (shin bone): Location, anatomy & common conditions. https://my.clevelandclinic.org/health/body/23026-tibia",
+    "cc-fibula": "Cleveland Clinic. (2022c, May 23). Fibula (calf bone): Anatomy, function & common conditions. https://my.clevelandclinic.org/health/body/23122-fibula-calf-bone",
+    "cc-lungs": "Cleveland Clinic. (2026b, March 6). Lungs: How they work. https://my.clevelandclinic.org/health/body/8960-lungs",
+    "cc-heart": "Cleveland Clinic. (2024a, January 26). Heart. https://my.clevelandclinic.org/health/body/21704-heart",
+    "cc-kidney": "Cleveland Clinic. (2025d, November 5). Kidneys: Location, anatomy, function & health. https://my.clevelandclinic.org/health/body/21824-kidney",
+    "cc-bladder": "Cleveland Clinic. (2023b, May 24). Bladder: Anatomy, location, function & related conditions. https://my.clevelandclinic.org/health/body/25010-bladder",
+    "cc-aorta": "Cleveland Clinic. (2022a, February 24). Aorta: Anatomy and function. https://my.clevelandclinic.org/health/body/17058-aorta-anatomy",
+    "cc-brachial-artery": "Cleveland Clinic. (2025e, December 22). Brachial artery: Location, anatomy & function. https://my.clevelandclinic.org/health/body/22193-brachial-artery",
+    "cc-radial-artery": "Cleveland Clinic. (2021, October 26). Radial artery: Anatomy and function. https://my.clevelandclinic.org/health/body/21856-radial-artery",
+    "cc-femoral-artery": "Cleveland Clinic. (2024b, May 3). Femoral artery. https://my.clevelandclinic.org/health/body/21645-femoral-artery"
+  },
+  "structures": [
+    {
+      "id": "skull",
+      "name": "Skull",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): sphere at the top of the model",
+      "summary": "The skull is the bony case of the head. It protects the brain and gives the face its shape. Its bones are locked together by seams called sutures.",
+      "location": "Top of the body, resting on the first neck vertebra.",
+      "functions": [
+        "Protects the brain",
+        "Protects sense organs such as the eyes and ears",
+        "Gives the head and face their shape",
+        "Provides attachment points for head and face muscles"
+      ],
+      "parts": [
+        "Cranium (braincase): frontal, parietal, temporal, occipital, sphenoid and ethmoid bones",
+        "Facial bones: including the nasal bones, cheekbones (zygomatic), upper jaw (maxilla) and lower jaw (mandible)",
+        "Sutures: fibrous joints between skull bones"
+      ],
+      "numbers": [
+        {
+          "fact": "About 22 bones: 8 cranial and 14 facial",
+          "source": "openstax-ap2e"
+        },
+        {
+          "fact": "Some sutures close in infancy; others stay unfused until a person's 60s",
+          "source": "cc-skull"
+        }
+      ],
+      "did_you_know": "The lower jaw (mandible) is the only skull bone that moves.",
+      "model_note": "Drawn as a single smooth sphere. A real skull is made of many separate bones.",
+      "sources": [
+        "openstax-ap2e",
+        "cc-skull"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "vertebral_column",
+      "name": "Vertebral column (spine)",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): 9 stacked spheres below the skull",
+      "summary": "The spine is a stack of bones called vertebrae. It holds the body upright and protects the spinal cord. Soft discs between the bones absorb shock.",
+      "location": "Runs down the back of the body, from the base of the skull to the pelvis.",
+      "functions": [
+        "Protects the spinal cord and spinal nerves",
+        "Acts as the main weight-bearing axis, passing the trunk's weight to the legs",
+        "Allows bending and twisting",
+        "Anchors the ribs and many muscles"
+      ],
+      "parts": [
+        "Cervical region (neck)",
+        "Thoracic region (upper and middle back; attaches to the ribs)",
+        "Lumbar region (lower back)",
+        "Sacrum and coccyx (tailbone), made of fused vertebrae",
+        "Intervertebral discs: a gel-like centre inside a tough outer ring"
+      ],
+      "numbers": [
+        {
+          "fact": "33 vertebrae: 7 cervical, 12 thoracic, 5 lumbar, 5 fused sacral, 4 fused coccygeal",
+          "source": "statpearls-vertebral-column"
+        },
+        {
+          "fact": "Discs make up about 25% of the spine's length",
+          "source": "statpearls-vertebral-column"
+        },
+        {
+          "fact": "31 pairs of spinal nerves branch out between the vertebrae",
+          "source": "cc-spine"
+        }
+      ],
+      "did_you_know": "Babies are born with only some of the spine's curves. The neck curve forms when they hold up their heads, and the lower-back curve forms when they start to stand.",
+      "model_note": "Shows 9 rounded segments in a straight line. A real spine has 33 vertebrae and an S-shaped curve.",
+      "sources": [
+        "statpearls-vertebral-column",
+        "cc-spine",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "ribs",
+      "name": "Ribs",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): 5 pairs of curved bones from the spine",
+      "summary": "The ribs are curved bones that form a cage around the chest. They protect the heart and lungs. They also move to help you breathe.",
+      "location": "Chest. Each rib joins the thoracic spine at the back. Most curve round to the breastbone (sternum) at the front.",
+      "functions": [
+        "Protect the heart, lungs and other chest organs",
+        "Move during breathing to change the size of the chest",
+        "Anchor breathing and trunk muscles"
+      ],
+      "parts": [
+        "True ribs (1-7): attach directly to the breastbone by their own cartilage",
+        "False ribs (8-10): attach indirectly, through the cartilage of rib 7",
+        "Floating ribs (11-12): no front attachment"
+      ],
+      "numbers": [
+        {
+          "fact": "Usually 12 pairs",
+          "source": "statpearls-ribs"
+        },
+        {
+          "fact": "Adults have 206 to 213 bones in total, partly because some people have extra ribs or vertebrae",
+          "source": "cc-bones"
+        }
+      ],
+      "did_you_know": "The diaphragm, a dome-shaped muscle under the ribs, does most of the work of breathing in.",
+      "model_note": "Shows 5 pairs that stop short at the front. Real ribs are 12 pairs and most connect to the breastbone.",
+      "sources": [
+        "statpearls-ribs",
+        "cc-bones",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "pelvis",
+      "name": "Pelvis",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): two thick bones meeting at the centre, below the spine",
+      "summary": "The pelvis is a ring of bones at the base of the spine. It carries the weight of the upper body to the legs. It also forms a basin that holds the bladder and reproductive organs.",
+      "location": "Lower trunk, between the spine and the thigh bones.",
+      "functions": [
+        "Supports the weight of the upper body",
+        "Forms the pelvic cavity, which holds urinary and reproductive organs",
+        "Provides the hip sockets for the thigh bones",
+        "Forms the birth canal in females"
+      ],
+      "parts": [
+        "Ilium: the largest part, forming the upper wings",
+        "Ischium: the 'sit bones'",
+        "Pubis: the smallest part, at the front",
+        "Sacrum and coccyx at the back"
+      ],
+      "numbers": [
+        {
+          "fact": "Made of five named bony parts: ilium, ischium, pubis, sacrum and coccyx",
+          "source": "cc-pelvis"
+        }
+      ],
+      "did_you_know": "Female pelvises are usually broader and shallower than male ones, which helps with childbirth.",
+      "model_note": "Drawn as two straight bars. A real pelvis is a wide, bowl-shaped ring.",
+      "sources": [
+        "cc-pelvis",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "humerus",
+      "name": "Humerus (upper arm bone)",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): shoulder-to-elbow bone, left and right",
+      "summary": "The humerus is the only bone in the upper arm. It runs from the shoulder to the elbow. Many arm and shoulder muscles attach to it.",
+      "location": "Upper arm, from the shoulder to the elbow.",
+      "functions": [
+        "Lets the arm move, bend and rotate",
+        "Anchors 13 muscles",
+        "Helps keep the elbow and hand stable"
+      ],
+      "parts": [
+        "Head: the rounded top that fits into the shoulder socket",
+        "Shaft: the long middle section",
+        "Lower end: forms the top of the elbow joint with the radius and ulna"
+      ],
+      "numbers": [
+        {
+          "fact": "About 30 cm (1 foot) long in most adults",
+          "source": "cc-humerus"
+        },
+        {
+          "fact": "Longest bone in the body after the leg bones",
+          "source": "cc-humerus"
+        }
+      ],
+      "did_you_know": "Hitting your 'funny bone' actually bumps the ulnar nerve, which runs just under the skin at the inner elbow.",
+      "model_note": "Drawn as a straight tube. The real bone has a rounded head and a wider lower end.",
+      "sources": [
+        "cc-humerus",
+        "cc-ulnar-nerve",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "forearm_bones",
+      "name": "Radius and ulna (forearm bones)",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): elbow-to-wrist bone, left and right (drawn as one tube)",
+      "summary": "The forearm has two bones, the radius and the ulna. They run side by side from the elbow to the wrist. The radius rolls over the ulna so you can turn your palm up and down.",
+      "location": "Forearm. The radius is on the thumb side; the ulna is on the little-finger side.",
+      "functions": [
+        "Let the forearm rotate (palm up, palm down)",
+        "Form part of the elbow joint",
+        "Join the wrist bones so the wrist can bend and turn"
+      ],
+      "parts": [
+        "Radius: thicker and slightly shorter, on the thumb side",
+        "Ulna: slightly longer, on the little-finger side; forms the bony point of the elbow"
+      ],
+      "numbers": [
+        {
+          "fact": "Two bones in each forearm",
+          "source": "cc-radius"
+        }
+      ],
+      "did_you_know": "The bony point you lean on at the elbow is the top end of the ulna.",
+      "model_note": "Drawn as one tube to keep the model simple. In the body there are two separate bones.",
+      "sources": [
+        "cc-radius",
+        "cc-ulna",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "hand",
+      "name": "Hand and wrist bones",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): short bone below the wrist plus 4 thin finger bones, left and right",
+      "summary": "The hand is built from wrist bones, palm bones and finger bones. Together they allow strong gripping and very fine movement.",
+      "location": "End of each arm, below the forearm.",
+      "functions": [
+        "Give the hand and wrist their shape and support",
+        "Allow gripping, pinching and precise movement",
+        "Let the wrist bend and rotate"
+      ],
+      "parts": [
+        "Carpals: 8 wrist bones in two rows of four",
+        "Metacarpals: the palm bones",
+        "Phalanges: the finger and thumb bones",
+        "Carpal tunnel: a passage through the wrist bones for tendons and a nerve"
+      ],
+      "numbers": [
+        {
+          "fact": "27 bones per hand and wrist: 8 carpals, 5 metacarpals, 14 phalanges",
+          "source": "openstax-ap2e"
+        },
+        {
+          "fact": "8 carpal bones, arranged in two rows of four",
+          "source": "cc-hand-wrist"
+        }
+      ],
+      "did_you_know": "Each finger has three bones, but the thumb has only two.",
+      "model_note": "Shows a simple palm and four fingers. There is no separate thumb or wrist bones.",
+      "sources": [
+        "openstax-ap2e",
+        "cc-hand-wrist"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "femur",
+      "name": "Femur (thigh bone)",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): hip-to-knee bone, left and right",
+      "summary": "The femur is the thigh bone. It runs from the hip to the knee. It carries your body weight when you stand, walk and run.",
+      "location": "Thigh, from the hip joint to the knee joint.",
+      "functions": [
+        "Bears body weight",
+        "Keeps the body stable when standing and moving",
+        "Anchors muscles, tendons and ligaments at the hip and knee"
+      ],
+      "parts": [
+        "Head: the ball that fits into the hip socket",
+        "Shaft: the long middle section",
+        "Lower end: forms the top of the knee joint"
+      ],
+      "numbers": [
+        {
+          "fact": "About 46 cm (18 inches) long in most adults",
+          "source": "cc-femur"
+        },
+        {
+          "fact": "Can support up to 30 times body weight",
+          "source": "cc-femur"
+        }
+      ],
+      "did_you_know": "The femur is the longest and strongest bone in the body.",
+      "model_note": "Drawn as a straight tube. The real femur angles inward from hip to knee.",
+      "sources": [
+        "cc-femur",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "lower_leg_bones",
+      "name": "Tibia and fibula (lower leg bones)",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): knee-to-ankle bone, left and right (drawn as one tube)",
+      "summary": "The lower leg has two bones. The tibia, or shin bone, carries the body's weight. The thinner fibula sits beside it and helps steady the ankle.",
+      "location": "Lower leg, from just below the knee to the ankle. The tibia is on the inner side; the fibula is on the outer side.",
+      "functions": [
+        "Tibia: supports body weight and links the knee to the ankle",
+        "Fibula: supports the ankle and anchors calf and leg muscles",
+        "Together: form the ankle joint with the talus bone of the foot"
+      ],
+      "parts": [
+        "Tibia (shin bone)",
+        "Fibula (calf bone)"
+      ],
+      "numbers": [
+        {
+          "fact": "The tibia is the second-longest bone, about 38 cm (15 inches) in adults",
+          "source": "cc-tibia"
+        },
+        {
+          "fact": "The fibula does not bear body weight",
+          "source": "cc-fibula"
+        }
+      ],
+      "did_you_know": "The bumps on either side of your ankle are the lower ends of the tibia (inside) and fibula (outside).",
+      "model_note": "Drawn as one tube. In the body there are two separate bones.",
+      "sources": [
+        "cc-tibia",
+        "cc-fibula",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "foot",
+      "name": "Foot bones",
+      "layer": "skeleton",
+      "code_reference": "drawSkeleton(): short forward-pointing bone at each ankle",
+      "summary": "The foot bones form arches that carry body weight. They help with balance and act like springs when you walk and run.",
+      "location": "Below the ankle, at the end of each leg.",
+      "functions": [
+        "Support body weight when standing",
+        "Absorb shock and push the body forward when walking",
+        "Help with balance on uneven ground"
+      ],
+      "parts": [
+        "Tarsals: ankle and heel bones, including the talus and calcaneus (heel bone)",
+        "Metatarsals: the long bones of the middle foot",
+        "Phalanges: the toe bones",
+        "Arches: lengthwise and crosswise curves that spread weight"
+      ],
+      "numbers": [
+        {
+          "fact": "26 bones per foot: 7 tarsals, 5 metatarsals, 14 phalanges",
+          "source": "openstax-ap2e"
+        }
+      ],
+      "did_you_know": "Together, your two feet hold about a quarter of all the bones in your body.",
+      "model_note": "Drawn as one short segment pointing forward. There are no separate toes or arches.",
+      "sources": [
+        "openstax-ap2e",
+        "cc-fibula"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "lungs",
+      "name": "Lungs",
+      "layer": "organs",
+      "code_reference": "drawOrgans(): two tall pink-red shapes at chest height",
+      "summary": "The lungs are two spongy organs in the chest. They take oxygen from the air into the blood. They also remove carbon dioxide from the body.",
+      "location": "Chest, on either side of the heart, inside the rib cage.",
+      "functions": [
+        "Bring oxygen into the blood",
+        "Remove carbon dioxide from the body"
+      ],
+      "parts": [
+        "Right lung: 3 lobes (upper, middle, lower)",
+        "Left lung: 2 lobes (upper, lower)",
+        "Cardiac notch: a hollow in the left lung that makes room for the heart",
+        "Airways (bronchi) and tiny air sacs (alveoli)"
+      ],
+      "numbers": [
+        {
+          "fact": "Adults breathe about 12 to 20 times per minute at rest",
+          "source": "cc-lungs"
+        },
+        {
+          "fact": "Right lung has 3 lobes; left lung has 2",
+          "source": "cc-lungs"
+        }
+      ],
+      "did_you_know": "The right lung is shorter and wider than the left.",
+      "model_note": "Drawn as two smooth ovals of equal size. Real lungs differ in size and lobes.",
+      "sources": [
+        "cc-lungs",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "heart",
+      "name": "Heart",
+      "layer": "organs",
+      "code_reference": "drawOrgans(): orange-red shape between and below the lungs",
+      "summary": "The heart is a muscular pump in the chest. It pushes blood through the blood vessels to every part of the body. It has four chambers and four valves.",
+      "location": "Front of the chest, between the lungs, slightly left of centre, behind the breastbone.",
+      "functions": [
+        "Pumps oxygen-rich blood to the body",
+        "Pumps oxygen-poor blood to the lungs",
+        "Helps keep blood pressure steady"
+      ],
+      "parts": [
+        "Two upper chambers: right and left atria",
+        "Two lower chambers: right and left ventricles",
+        "Four valves: tricuspid, mitral, pulmonary and aortic",
+        "Its own electrical system that sets the heartbeat"
+      ],
+      "numbers": [
+        {
+          "fact": "About the size of a fist",
+          "source": "cc-heart"
+        },
+        {
+          "fact": "Weighs about 280 g (10 ounces) on average",
+          "source": "cc-heart"
+        }
+      ],
+      "did_you_know": "The heart's valves are one-way doors. They stop blood from flowing backwards.",
+      "model_note": "Drawn as a single smooth oval. The real heart has four chambers and is cone-shaped.",
+      "sources": [
+        "cc-heart",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "kidneys",
+      "name": "Kidneys",
+      "layer": "organs",
+      "code_reference": "drawOrgans(): pair of tan shapes below the heart (CONFIRM with team)",
+      "summary": "The kidneys are two bean-shaped organs near the back of the abdomen. They filter waste and extra water from the blood to make urine. They also help control blood pressure.",
+      "location": "Upper back of the abdomen, one on each side of the spine, just below the rib cage.",
+      "functions": [
+        "Filter waste and extra fluid from the blood",
+        "Make urine",
+        "Help control blood pressure",
+        "Make hormones, including one that triggers red blood cell production",
+        "Help balance the blood's acidity (pH)"
+      ],
+      "parts": [
+        "Nephrons: tiny filtering units",
+        "Renal artery: brings blood in",
+        "Ureter: carries urine to the bladder"
+      ],
+      "numbers": [
+        {
+          "fact": "About 10-13 cm (4-5 inches) long, roughly fist-sized",
+          "source": "cc-kidney"
+        },
+        {
+          "fact": "Over 1 million nephrons in each kidney",
+          "source": "cc-kidney"
+        },
+        {
+          "fact": "Filter about 190 litres (200 quarts) of fluid a day, but make only about 2 litres (2 quarts) of urine",
+          "source": "cc-kidney"
+        }
+      ],
+      "did_you_know": "Almost all the fluid the kidneys filter is taken back into the body. Only about 1% leaves as urine.",
+      "model_note": "Drawn as two simple ovals in front of the spine. Real kidneys sit towards the back of the body.",
+      "sources": [
+        "cc-kidney",
+        "openstax-ap2e"
+      ],
+      "status": "confirm_mapping"
+    },
+    {
+      "id": "bladder",
+      "name": "Urinary bladder",
+      "layer": "organs",
+      "code_reference": "drawOrgans(): purple shape at the lowest point, inside the pelvis (CONFIRM with team)",
+      "summary": "The bladder is a stretchy, hollow organ in the pelvis. It stores urine from the kidneys until you go to the toilet. Its muscular wall squeezes to empty it.",
+      "location": "Lower abdomen, inside the pelvis, behind the pubic bone.",
+      "functions": [
+        "Stores urine",
+        "Signals the brain when it is filling",
+        "Squeezes to push urine out"
+      ],
+      "parts": [
+        "Inner lining (urothelium): stops urine leaking into the body",
+        "Connective tissue layer with vessels and nerves",
+        "Thick muscle wall made of three layers of smooth muscle"
+      ],
+      "numbers": [
+        {
+          "fact": "Holds about 500-700 mL (about two cups)",
+          "source": "cc-bladder"
+        },
+        {
+          "fact": "The urge to urinate usually starts at about 200-350 mL",
+          "source": "cc-bladder"
+        },
+        {
+          "fact": "About 5 cm (2 inches) across when empty; can stretch to about 15 cm (6 inches)",
+          "source": "cc-bladder"
+        }
+      ],
+      "did_you_know": "You feel the need to go well before the bladder is full.",
+      "model_note": "Drawn as a fixed oval. A real bladder changes size as it fills and empties.",
+      "sources": [
+        "cc-bladder",
+        "openstax-ap2e"
+      ],
+      "status": "confirm_mapping"
+    },
+    {
+      "id": "aorta",
+      "name": "Aorta",
+      "layer": "vessels",
+      "code_reference": "drawVessels(): central vertical tube running down the body",
+      "summary": "The aorta is the body's largest artery. It carries oxygen-rich blood away from the heart. Smaller arteries branch off it to reach every part of the body.",
+      "location": "Starts at the heart, arches over it, then runs down through the chest and abdomen to the pelvis.",
+      "functions": [
+        "Carries oxygen-rich blood from the heart to the body",
+        "Feeds branches that supply the head, arms, organs and legs"
+      ],
+      "parts": [
+        "Ascending aorta: rises from the heart's left ventricle",
+        "Aortic arch: curves over the heart",
+        "Descending thoracic aorta: runs down the chest",
+        "Abdominal aorta: runs through the abdomen and splits into the iliac arteries"
+      ],
+      "numbers": [
+        {
+          "fact": "About 2.5 cm (1 inch) wide at its widest point",
+          "source": "cc-aorta"
+        },
+        {
+          "fact": "More than 30 cm (1 foot) long",
+          "source": "cc-aorta"
+        }
+      ],
+      "did_you_know": "The aorta is elastic. It stretches with each heartbeat and then springs back, helping to keep blood moving.",
+      "model_note": "Drawn as a straight vertical tube. The real aorta starts with an arch over the heart.",
+      "sources": [
+        "cc-aorta",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "arm_arteries",
+      "name": "Arteries of the arm",
+      "layer": "vessels",
+      "code_reference": "drawVessels(): branches from the top of the aorta to each shoulder, elbow and wrist",
+      "summary": "These arteries carry blood from the aorta down to the arms and hands. The main vessel changes its name as it travels. At the elbow it splits in two.",
+      "location": "From the top of the chest, through the armpit and upper arm, to the forearm and hand.",
+      "functions": [
+        "Supply oxygen-rich blood to the shoulder, arm, forearm and hand"
+      ],
+      "parts": [
+        "Subclavian artery: under the collarbone",
+        "Axillary artery: in the armpit",
+        "Brachial artery: down the upper arm to the inner elbow",
+        "Radial artery: elbow to the thumb side of the wrist",
+        "Ulnar artery: elbow to the little-finger side of the wrist"
+      ],
+      "numbers": [
+        {
+          "fact": "The brachial artery splits into two branches at the elbow crease: radial and ulnar",
+          "source": "cc-brachial-artery"
+        }
+      ],
+      "did_you_know": "A blood pressure cuff squeezes the brachial artery. You check your pulse at the wrist by pressing on the radial artery.",
+      "model_note": "Drawn as one tube per arm. In the body the artery splits into two at the elbow.",
+      "sources": [
+        "cc-brachial-artery",
+        "cc-radial-artery",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    },
+    {
+      "id": "leg_arteries",
+      "name": "Arteries of the leg",
+      "layer": "vessels",
+      "code_reference": "drawVessels(): branches from the bottom of the aorta down each leg",
+      "summary": "These arteries carry blood from the aorta down to the legs and feet. The aorta splits into the iliac arteries in the pelvis. These continue as the femoral arteries in the thighs.",
+      "location": "From the lower abdomen, through the pelvis and groin, down the thigh to behind the knee and into the lower leg.",
+      "functions": [
+        "Supply oxygen-rich blood to the hips, thighs, legs and feet"
+      ],
+      "parts": [
+        "Common and external iliac arteries: in the pelvis",
+        "Femoral artery: down the thigh",
+        "Popliteal artery: behind the knee",
+        "Arteries of the lower leg and foot"
+      ],
+      "numbers": [
+        {
+          "fact": "The femoral artery is usually 7-8 mm wide",
+          "source": "cc-femoral-artery"
+        }
+      ],
+      "did_you_know": "Doctors often thread thin tubes (catheters) through the femoral artery to reach the heart, because it is wide and easy to reach.",
+      "model_note": "Drawn as one tube per leg. Real leg arteries branch many times.",
+      "sources": [
+        "cc-femoral-artery",
+        "cc-aorta",
+        "openstax-ap2e"
+      ],
+      "status": "draft"
+    }
+  ]
+}
