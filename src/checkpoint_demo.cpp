@@ -234,11 +234,17 @@ namespace {
             bitmap(float(control.x-5), float(control.y+10), bezierLabels[i], 1.0f);
         }
         std::vector<Point2D> cp={{x+20, y+h*.25}, {x+w*.3, y+h*.7}, {x+w*.58, y+h*.35}, {x+w-20, y+h*.65}};
+        line(cp, .48f, .35f, .22f, 1);
         line(catmullRomSpline(cp, 25), .55f, .58f, 1, 2);
-        for (auto p:cp)point(p.x, p.y, 1, .7f, .3f, 6);
+        const char* splineLabels[]={"S0", "S1", "S2", "S3"};
+        for (std::size_t i=0; i<cp.size(); ++i) {
+            point(cp[i].x, cp[i].y, 1, .7f, .3f, 6);
+            color(1, .7f, .3f);
+            bitmap(float(cp[i].x-5), float(cp[i].y-16), splineLabels[i], 1.0f);
+        }
         legend(x+14, y+23, "Bezier B0 to B3", .3f, .85f, .68f);
         legend(x+w*.5, y+23, "Catmull Rom", .55f, .58f, 1);
-        legend(x+14, y+10, "Spline control points", 1, .7f, .3f);
+        legend(x+14, y+10, "Spline controls S0 to S3", 1, .7f, .3f);
     }
 
     void drawAnatomy(double x, double y, double w, double h) {
