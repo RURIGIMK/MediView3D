@@ -105,6 +105,15 @@ If CMake reports that OpenGL or GLFW cannot be found, check the packages in step
 ./build-gl/mediview_demo
 ```
 
+To run the separate 2D checkpoint demonstration (lines, polygon clipping and
+scanline filling, circles, ellipses, curves, and schematic anatomy):
+
+```bash
+./build-gl/mediview_checkpoint_demo
+```
+
+Both viewers are built when `MEDIVIEW_BUILD_OPENGL_DEMO=ON` and OpenGL/GLFW are available.
+
 ### 5. Run the automated algorithm tests
 
 In another terminal, from the repository root:
