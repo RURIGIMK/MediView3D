@@ -223,11 +223,20 @@ namespace {
     void drawCurvePanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Bezier and spline curves");
         Point2D a{x+15, y+35}, b{x+w*.3, y+h*.8}, c{x+w*.65, y+h*.2}, d{x+w-15, y+h*.7};
+        const std::vector<Point2D> bezierControls={a, b, c, d};
+        line(bezierControls, .3f, .48f, .43f, 1);
         line(bezierCurve(a, b, c, d, 80), .3f, .85f, .68f, 2);
+        const char* bezierLabels[]={"B0", "B1", "B2", "B3"};
+        for (int i=0; i<4; ++i) {
+            const auto& control=bezierControls[i];
+            point(control.x, control.y, .3f, .85f, .68f, 6);
+            color(.3f, .85f, .68f);
+            bitmap(float(control.x-5), float(control.y+10), bezierLabels[i], 1.0f);
+        }
         std::vector<Point2D> cp={{x+20, y+h*.25}, {x+w*.3, y+h*.7}, {x+w*.58, y+h*.35}, {x+w-20, y+h*.65}};
         line(catmullRomSpline(cp, 25), .55f, .58f, 1, 2);
         for (auto p:cp)point(p.x, p.y, 1, .7f, .3f, 6);
-        legend(x+14, y+23, "Bezier", .3f, .85f, .68f);
+        legend(x+14, y+23, "Bezier B0 to B3", .3f, .85f, .68f);
         legend(x+w*.5, y+23, "Catmull Rom", .55f, .58f, 1);
         legend(x+14, y+10, "Spline control points", 1, .7f, .3f);
     }
