@@ -10,6 +10,7 @@ namespace {
     int W=1280, H=760;
     bool grid=true;
     bool polygonFill=true;
+    bool concavePolygon=false;
     int lineExample=0; // All, positive slope, horizontal, vertical, negative slope.
     void color(float r, float g, float b) {
         glColor3f(r, g, b);
@@ -128,11 +129,22 @@ namespace {
         color(.7f, .78f, .88f);
         bitmap(float(x+w*.5), float(y+h-22),
                polygonFill ? "F  Fill on" : "F  Fill off", 1.0f);
+        color(.85f, .91f, 1.0f);
+        bitmap(float(x+w*.5), float(y+h-53),
+               concavePolygon ? "P  Concave" : "P  Convex", 1.0f);
         const double half=w*.5;
         const double plotBottom=y+48, plotHeight=h-105;
-        const Polygon local={{12, 0}, {half*.75, plotHeight*.08},
-                             {half-12, plotHeight*.78}, {half*.35, plotHeight},
-                             {8, plotHeight*.65}};
+        const Polygon convex={{12, 0}, {half*.75, plotHeight*.08},
+                              {half-12, plotHeight*.78}, {half*.35, plotHeight},
+                              {8, plotHeight*.65}};
+        // The inward corner stays within the clip window so the clipped result
+        // visibly retains its concavity and remains a single connected polygon.
+        const Polygon concave={{half*.10, plotHeight*.10},
+                               {half*.90, plotHeight*.10},
+                               {half*.90, plotHeight*.90},
+                               {half*.55, plotHeight*.50},
+                               {half*.10, plotHeight*.90}};
+        const Polygon& local=concavePolygon ? concave : convex;
         for (int view=0; view<2; ++view) {
             const double origin=x+view*half;
             Polygon original;
@@ -259,6 +271,7 @@ namespace {
             if (k==GLFW_KEY_ESCAPE)glfwSetWindowShouldClose(w, GLFW_TRUE);
             if (k==GLFW_KEY_G)grid=!grid;
             if (k==GLFW_KEY_F)polygonFill=!polygonFill;
+            if (k==GLFW_KEY_P)concavePolygon=!concavePolygon;
             if (k==GLFW_KEY_L)lineExample=(lineExample+1)%5;
         }
     }
