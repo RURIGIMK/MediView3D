@@ -249,22 +249,47 @@ namespace {
 
     void drawAnatomy(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Anatomy study");
-        double cx=x+w/2, cy=y+h*.52;
-        auto head=midpointCircle(int(cx), int(cy+h*.28), int(h*.10));
-        color(.7f, .78f, .88f);
-        glBegin(GL_POINTS);
-        for (auto p:head)glVertex2d(p.x, p.y);
-        glEnd();
-        line(bresenhamLine(int(cx), int(cy+h*.17), int(cx), int(cy-h*.22)), .7f, .78f, .88f, 3);
-        line(bresenhamLine(int(cx), int(cy+h*.08), int(cx-w*.2), int(cy-h*.02)), .7f, .78f, .88f, 3);
-        line(bresenhamLine(int(cx), int(cy+h*.08), int(cx+w*.2), int(cy-h*.02)), .7f, .78f, .88f, 3);
-        line(bresenhamLine(int(cx), int(cy-h*.22), int(cx-w*.12), int(y+20)), .7f, .78f, .88f, 3);
-        line(bresenhamLine(int(cx), int(cy-h*.22), int(cx+w*.12), int(y+20)), .7f, .78f, .88f, 3);
-        auto heart=bezierCurve({cx-18, cy-12}, {cx-35, cy+15}, {cx-5, cy+20}, {cx, cy+2}, 30);
-        line(heart, 1, .35f, .4f, 2);
-        line(bezierCurve({cx, cy+2}, {cx+25, cy+24}, {cx+35, cy-5}, {cx+4, cy-18}, 30), 1, .35f, .4f, 2);
-        legend(x+14, y+10, "Body", .7f, .78f, .88f);
-        legend(x+w*.5, y+10, "Heart curves", 1, .35f, .4f);
+        const double cx=x+w*.5;
+        const double base=y+48, height=h-90;
+        const double shoulder=base+height*.68, hip=base+height*.30;
+
+        // A filled polygon provides a simplified torso behind the organs.
+        const Polygon torso={{cx-w*.15, shoulder}, {cx+w*.15, shoulder},
+                             {cx+w*.10, hip}, {cx-w*.10, hip}};
+        pixels(scanlineFillPoints(torso), .14f, .22f, .30f);
+        polygon(torso, .7f, .78f, .88f);
+        pixels(midpointCircle(int(cx), int(base+height*.88), int(height*.10)),
+               .7f, .78f, .88f);
+
+        // Bresenham supplies the neck, spine, arms and legs.
+        const auto bodyLine=[](Point2D start, Point2D end) {
+            pixels(bresenhamLine(int(start.x), int(start.y), int(end.x), int(end.y)),
+                   .7f, .78f, .88f);
+        };
+        bodyLine({cx, base+height*.78}, {cx, hip});
+        for (int side:{-1, 1}) {
+            bodyLine({cx+side*w*.15, shoulder}, {cx+side*w*.23, base+height*.38});
+            bodyLine({cx+side*w*.23, base+height*.38}, {cx+side*w*.25, base+height*.24});
+            bodyLine({cx+side*w*.07, hip}, {cx+side*w*.12, base});
+            pixels(midpointEllipse(int(cx+side*w*.065), int(base+height*.56),
+                                   int(w*.045), int(height*.095)), .35f, .75f, 1);
+        }
+
+        // Two cubic Bezier segments form one closed schematic heart.
+        const double heartY=base+height*.43;
+        const double heartWidth=w*.055, heartHeight=height*.10;
+        const Point2D notch{cx, heartY+heartHeight*.25};
+        const Point2D tip{cx, heartY-heartHeight};
+        line(bezierCurve(notch, {cx-heartWidth*1.8, heartY+heartHeight*1.5},
+                         {cx-heartWidth*1.8, heartY}, tip, 40), 1, .35f, .4f, 2);
+        line(bezierCurve(tip, {cx+heartWidth*1.8, heartY},
+                         {cx+heartWidth*1.8, heartY+heartHeight*1.5}, notch, 40),
+             1, .35f, .4f, 2);
+
+        legend(x+14, y+23, "Lines and circle", .7f, .78f, .88f);
+        legend(x+w*.5, y+23, "Ellipse lungs", .35f, .75f, 1);
+        legend(x+14, y+10, "Filled torso", .14f, .22f, .30f);
+        legend(x+w*.5, y+10, "Bezier heart", 1, .35f, .4f);
     }
 
     void render() {
