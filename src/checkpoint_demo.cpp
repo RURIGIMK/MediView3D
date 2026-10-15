@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 using namespace mediview;
 
@@ -46,6 +47,11 @@ namespace {
         glEnd();
     }
 
+    void bitmap(float x,float y,const char* str,float scale=1.4f){
+     static const unsigned char g[][7]={{14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},{30,17,17,17,17,17,30},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},{14,17,16,23,17,17,15},{17,17,17,31,17,17,17},{14,4,4,4,4,4,14},{7,2,2,2,18,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},{17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},{30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},{15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},{17,17,17,17,17,10,4},{17,17,17,21,21,21,10},{17,17,10,4,10,17,17},{17,17,10,4,4,4,4},{31,1,2,4,8,16,31},{14,17,19,21,25,17,14},{4,12,4,4,4,4,14},{14,17,1,2,4,8,31},{30,1,1,14,1,1,30},{2,6,10,18,31,2,2},{31,16,16,30,1,1,30},{14,16,16,30,17,17,14},{31,1,2,4,8,8,8},{14,17,17,14,17,17,14},{14,17,17,15,1,1,14}};
+     const char* chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";glBegin(GL_QUADS);for(;*str;++str){char c=*str;if(c>='a'&&c<='z')c=char(c-32);const char*p=std::strchr(chars,c);if(p){int n=int(p-chars);for(int j=0;j<7;++j)for(int i=0;i<5;++i)if(g[n][j]&(1<<(4-i))){float xx=x+i*scale,yy=y+(6-j)*scale;glVertex2f(xx,yy);glVertex2f(xx+scale*.8f,yy);glVertex2f(xx+scale*.8f,yy+scale*.8f);glVertex2f(xx,yy+scale*.8f);}}x+=6*scale;}glEnd();
+    }
+
     void drawPanel(double x, double y, double w, double h, const char* title) {
         panel(x, y, w, h);
         color(.42f, .48f, .58f);
@@ -55,7 +61,8 @@ namespace {
         glVertex2d(x+w, y+h);
         glVertex2d(x, y+h);
         glEnd();
-        (void)title;
+        color(.85f, .91f, 1.0f);
+        bitmap(float(x+14), float(y+h-22), title, 1.4f);
     }
 
     void drawLinePanel(double x, double y, double w, double h) {
@@ -89,7 +96,7 @@ namespace {
     }
 
     void drawCirclePanel(double x, double y, double w, double h) {
-        drawPanel(x, y, w, h, "Circle");
+        drawPanel(x, y, w, h, "Circles and ellipses");
         auto c=midpointCircle(int(x+w*.32), int(y+h*.53), int(std::min(w, h)*.23));
         glBegin(GL_POINTS);
         color(.25f, .75f, 1);
@@ -103,7 +110,7 @@ namespace {
     }
 
     void drawCurvePanel(double x, double y, double w, double h) {
-        drawPanel(x, y, w, h, "Curves");
+        drawPanel(x, y, w, h, "Bezier and spline curves");
         Point2D a{x+15, y+35}, b{x+w*.3, y+h*.8}, c{x+w*.65, y+h*.2}, d{x+w-15, y+h*.7};
         line(bezierCurve(a, b, c, d, 80), .3f, .85f, .68f, 2);
         std::vector<Point2D> cp={{x+20, y+h*.25}, {x+w*.3, y+h*.7}, {x+w*.58, y+h*.35}, {x+w-20, y+h*.65}};
@@ -151,6 +158,8 @@ namespace {
             glEnd();
         }
         panel(16, H-58, W-32, 42);
+        color(.25f, .86f, .73f);
+        bitmap(30, float(H-43), "MediView 3D - Checkpoint 1", 2.0f);
         double margin=18, gap=14, top=H-78, bottom=18, pw=(W-2*margin-2*gap)/3, ph=(top-bottom-2*gap)/2;
         drawLinePanel(margin, bottom+ph+gap, pw, ph);
         drawPolygonPanel(margin+pw+gap, bottom+ph+gap, pw, ph);
