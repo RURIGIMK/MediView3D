@@ -66,9 +66,7 @@ ctest --test-dir build --output-on-failure
 
 Build the OpenGL demo by installing OpenGL development files and GLFW, then configuring with `-DMEDIVIEW_BUILD_OPENGL_DEMO=ON`. If GLFW/OpenGL are not found, CMake still builds the pure C++ algorithms and tests.
 
-## Current progress
 
-This is the initial checkpoint foundation. The algorithm implementations and basic automated tests are included. The optional OpenGL demo visualizes the implemented techniques in panels and shows a simplified anatomy study. The full 3D human model, 3D camera navigation, anatomical asset pipeline, 3D explode view, true 3D cross-section, and medical-grade content are **not yet implemented**.
 
 ## Known limitations
 
@@ -77,11 +75,3 @@ This is the initial checkpoint foundation. The algorithm implementations and bas
 - The OpenGL visualizer uses the legacy compatibility profile to keep setup lightweight for this checkpoint.
 - GUI and driver availability differ by operating system; use the build guide if the OpenGL window does not launch.
 - Performance has not been benchmarked and no 60 FPS claim is made.
-
-## Evidence
-
-Save screenshots of the running OpenGL application and passing test output under `evidence/`. Add date, platform, command used and what each screenshot demonstrates. Do not claim a screenshot is from the running application unless it was captured from that application.
-
-## Collaboration workflow
-
-Use feature branches and small, meaningful commits. Suggested first issues are in [`docs/CHECKPOINT_1.md`](docs/CHECKPOINT_1.md). Each group member should make genuine contributions, review another member's work, and record progress in commits or issues. Do not manufacture commit history or commit on behalf of teammates.
