@@ -124,26 +124,37 @@ namespace {
 
     void drawPolygonPanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Polygon");
-        Polygon p={{x+20, y+30}, {x+w*.75, y+45}, {x+w*.9, y+h*.75}, {x+w*.35, y+h*.9}, {x+10, y+h*.65}};
-        Rect r{x+w*.25, y+h*.25, x+w*.78, y+h*.72};
-        const auto clipped=clipPolygon(p, r);
-        // Plot the pixels computed by our C++ scanline algorithm.
-        // Draw the outlines afterwards so the fill cannot obscure them.
-        const auto fill=scanlineFillPoints(clipped);
-        color(.12f, .42f, .32f);
-        glPointSize(1.0f);
-        glBegin(GL_POINTS);
-        for (const auto& pixel:fill) glVertex2d(pixel.x, pixel.y);
-        glEnd();
-        polygon(p, .95f, .55f, .24f);
-        color(.3f, .65f, 1);
-        glBegin(GL_LINE_LOOP);
-        glVertex2d(r.left, r.bottom);
-        glVertex2d(r.right, r.bottom);
-        glVertex2d(r.right, r.top);
-        glVertex2d(r.left, r.top);
-        glEnd();
-        polygon(clipped, .2f, .9f, .67f);
+        const double half=w*.5;
+        const double plotBottom=y+48, plotHeight=h-105;
+        const Polygon local={{12, 0}, {half*.75, plotHeight*.08},
+                             {half-12, plotHeight*.78}, {half*.35, plotHeight},
+                             {8, plotHeight*.65}};
+        for (int view=0; view<2; ++view) {
+            const double origin=x+view*half;
+            Polygon original;
+            for (const auto& vertex:local) {
+                original.push_back({origin+vertex.x, plotBottom+vertex.y});
+            }
+            const Rect window{origin+half*.25, plotBottom+plotHeight*.20,
+                              origin+half*.78, plotBottom+plotHeight*.72};
+            const Polygon boundary={{window.left, window.bottom},
+                                    {window.right, window.bottom},
+                                    {window.right, window.top},
+                                    {window.left, window.top}};
+            if (view==0) {
+                polygon(original, .95f, .55f, .24f);
+                polygon(boundary, .3f, .65f, 1);
+            } else {
+                const auto clipped=clipPolygon(original, window);
+                pixels(scanlineFillPoints(clipped), .12f, .42f, .32f);
+                // Keep the retained boundary visible over the clipping window.
+                polygon(boundary, .3f, .65f, 1);
+                polygon(clipped, .2f, .9f, .67f);
+            }
+            color(.7f, .78f, .88f);
+            bitmap(float(origin+14), float(y+h-38),
+                   view==0 ? "Before clipping" : "After clipping", 1.0f);
+        }
         legend(x+14, y+23, "Original", .95f, .55f, .24f);
         legend(x+w*.5, y+23, "Clip window", .3f, .65f, 1);
         legend(x+14, y+10, "Clipped", .2f, .9f, .67f);
