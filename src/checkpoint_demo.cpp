@@ -9,6 +9,7 @@ using namespace mediview;
 namespace {
     int W=1280, H=760;
     bool grid=true;
+    bool polygonFill=true;
     int lineExample=0; // All, positive slope, horizontal, vertical, negative slope.
     void color(float r, float g, float b) {
         glColor3f(r, g, b);
@@ -124,6 +125,9 @@ namespace {
 
     void drawPolygonPanel(double x, double y, double w, double h) {
         drawPanel(x, y, w, h, "Polygon");
+        color(.7f, .78f, .88f);
+        bitmap(float(x+w*.5), float(y+h-22),
+               polygonFill ? "F  Fill on" : "F  Fill off", 1.0f);
         const double half=w*.5;
         const double plotBottom=y+48, plotHeight=h-105;
         const Polygon local={{12, 0}, {half*.75, plotHeight*.08},
@@ -146,7 +150,9 @@ namespace {
                 polygon(boundary, .3f, .65f, 1);
             } else {
                 const auto clipped=clipPolygon(original, window);
-                pixels(scanlineFillPoints(clipped), .12f, .42f, .32f);
+                if (polygonFill) {
+                    pixels(scanlineFillPoints(clipped), .12f, .42f, .32f);
+                }
                 // Keep the retained boundary visible over the clipping window.
                 polygon(boundary, .3f, .65f, 1);
                 polygon(clipped, .2f, .9f, .67f);
@@ -252,6 +258,7 @@ namespace {
         if (action==GLFW_PRESS) {
             if (k==GLFW_KEY_ESCAPE)glfwSetWindowShouldClose(w, GLFW_TRUE);
             if (k==GLFW_KEY_G)grid=!grid;
+            if (k==GLFW_KEY_F)polygonFill=!polygonFill;
             if (k==GLFW_KEY_L)lineExample=(lineExample+1)%5;
         }
     }
