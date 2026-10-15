@@ -6,7 +6,7 @@
 
 ## Project description
 
-I am developing MediView3D as a Computer Graphics project to explore how graphics algorithms can be used to represent and interact with simplified human anatomy. The project combines a C++ graphics-algorithm foundation with an OpenGL desktop prototype. The current prototype renders a schematic 3D skeleton, simplified organ shapes and branching vessels, with controls for rotating the scene, zooming and toggling visual layers.
+We are developing MediView3D as a Computer Graphics project to explore how graphics algorithms can be used to represent and interact with simplified human anatomy. The project combines a C++ graphics-algorithm foundation with an OpenGL desktop prototype. The current prototype renders a schematic 3D skeleton, simplified organ shapes and branching vessels, with controls for rotating the scene, zooming and toggling visual layers.
 
 This is an educational graphics prototype, not a clinically accurate anatomical model or a medical diagnostic tool.
 
@@ -147,9 +147,9 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## Current progress
 
-I have implemented the required core graphics algorithms in C++ and added automated tests for the algorithm foundation. I have also developed an initial interactive OpenGL anatomy prototype to move the project beyond a collection of separate 2D algorithm panels. The prototype presents a schematic 3D body structure with independently toggleable visual layers, perspective, lighting, rotation and zoom.
+We have implemented the required core graphics algorithms in C++ and added automated tests for the algorithm foundation. We have also developed an initial interactive OpenGL anatomy prototype to move the project beyond a collection of separate 2D algorithm panels. The prototype presents a schematic 3D body structure with independently toggleable visual layers, perspective, lighting, rotation and zoom.
 
-The current work is a prototype rather than a complete anatomy platform. I still need to build and run the updated version locally, verify the controls and rendering on the target computer, run the test suite again, and capture genuine screenshots for the checkpoint submission.
+The current work is a prototype rather than a complete anatomy platform. We still need to build and run the updated version locally, verify the controls and rendering on the target computer, run the test suite again, and capture genuine screenshots for the checkpoint submission.
 
 ## Known limitations and issues
 
@@ -164,7 +164,7 @@ The current work is a prototype rather than a complete anatomy platform. I still
 
 ## Checkpoint evidence
 
-I will capture screenshots directly from the running program and terminal rather than use mock-ups as evidence.
+We will capture screenshots directly from the running program and terminal rather than use mock-ups as evidence.
 
 1. The application open with the full anatomy prototype and visible interface.
 2. The anatomy with one or more layers toggled off, demonstrating interaction.
