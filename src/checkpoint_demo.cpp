@@ -63,7 +63,23 @@ namespace {
 
     void bitmap(float x,float y,const char* str,float scale=1.4f){
      static const unsigned char g[][7]={{14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},{30,17,17,17,17,17,30},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},{14,17,16,23,17,17,15},{17,17,17,31,17,17,17},{14,4,4,4,4,4,14},{7,2,2,2,18,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},{17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},{30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},{15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},{17,17,17,17,17,10,4},{17,17,17,21,21,21,10},{17,17,10,4,10,17,17},{17,17,10,4,4,4,4},{31,1,2,4,8,16,31},{14,17,19,21,25,17,14},{4,12,4,4,4,4,14},{14,17,1,2,4,8,31},{30,1,1,14,1,1,30},{2,6,10,18,31,2,2},{31,16,16,30,1,1,30},{14,16,16,30,17,17,14},{31,1,2,4,8,8,8},{14,17,17,14,17,17,14},{14,17,17,15,1,1,14}};
-     const char* chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";glBegin(GL_QUADS);for(;*str;++str){char c=*str;if(c>='a'&&c<='z')c=char(c-32);const char*p=std::strchr(chars,c);if(p){int n=int(p-chars);for(int j=0;j<7;++j)for(int i=0;i<5;++i)if(g[n][j]&(1<<(4-i))){float xx=x+i*scale,yy=y+(6-j)*scale;glVertex2f(xx,yy);glVertex2f(xx+scale*.8f,yy);glVertex2f(xx+scale*.8f,yy+scale*.8f);glVertex2f(xx,yy+scale*.8f);}}x+=6*scale;}glEnd();
+     const char* chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+     glBegin(GL_QUADS);
+     for(;*str;++str){
+        char c=*str;
+        //check for spaces and null ptr
+        if (c == ' ') {
+            x += 6 * scale;
+            continue;
+        }
+        if (c == ' ') {
+            x += 6 * scale;
+            continue;
+        }
+        if(c>='a'&&c<='z')c=char(c-32);
+        const char*p=std::strchr(chars,c);
+        if(p){int n=int(p-chars);
+            for(int j=0;j<7;++j)for(int i=0;i<5;++i)if(g[n][j]&(1<<(4-i))){float xx=x+i*scale,yy=y+(6-j)*scale;glVertex2f(xx,yy);glVertex2f(xx+scale*.8f,yy);glVertex2f(xx+scale*.8f,yy+scale*.8f);glVertex2f(xx,yy+scale*.8f);}}x+=6*scale;}glEnd();
     }
 
     // Match each label and swatch to the colour used for its geometry.
@@ -295,11 +311,7 @@ namespace {
     void render() {
         glClearColor(.035f, .045f, .07f, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(0, W, 0, H, -1, 1);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
+      
         if (grid) {
             color(.08f, .10f, .14f);
             glBegin(GL_LINES);
@@ -329,6 +341,12 @@ namespace {
         W=std::max(1, w);
         H=std::max(1, h);
         glViewport(0, 0, W, H);
+
+          glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0, W, 0, H, -1, 1);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
     }
 
     void key(GLFWwindow* w, int k, int, int action, int) {
