@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "mkdir -p web/assets/skeleton && cp assets/skeleton/skeleton_prepared.ply web/assets/skeleton/skeleton_prepared.ply",
+  "outputDirectory": "web"
+}
