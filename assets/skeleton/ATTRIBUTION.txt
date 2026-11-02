@@ -1,0 +1,2 @@
+Human skeleton 3D scan by Artec Group (www.artec3d.com), licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+Modified for MediView3D: welded, straightened (14.2 deg lean removed), re-centred, scaled to metres, stand rod removed, decimated to 650k triangles.

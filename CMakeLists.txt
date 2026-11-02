@@ -26,6 +26,8 @@ if(MEDIVIEW_BUILD_OPENGL_DEMO)
     endif()
     if(OpenGL_FOUND AND MEDIVIEW_GLFW_TARGET)
         add_executable(mediview_demo src/main.cpp)
+        target_compile_definitions(mediview_demo PRIVATE
+            MEDIVIEW_SKELETON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/skeleton/skeleton_prepared.ply")
         add_executable(mediview_checkpoint_demo src/checkpoint_demo.cpp)
         foreach(demo IN ITEMS mediview_demo mediview_checkpoint_demo)
             target_link_libraries(${demo} PRIVATE mediview_algorithms ${MEDIVIEW_GLFW_TARGET} OpenGL::GL)

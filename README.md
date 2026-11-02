@@ -58,7 +58,17 @@ The graphics algorithms are implemented in C++ independently of OpenGL. OpenGL i
 - Keyboard controls to show or hide the skeleton, organs, vessels and reference grid.
 - On-screen title, legend, control hints and an educational-use disclaimer.
 
-The anatomy shapes are illustrative approximations. They are not sourced from a medical scan and should not be interpreted as anatomically accurate models.
+The organ and vessel shapes are illustrative approximations and are not sourced from medical scans.
+
+### Skeleton rendering asset
+
+The interactive viewer renders the prepared scan-based skeleton mesh at
+`assets/skeleton/skeleton_prepared.ply` in place of the earlier schematic bone
+shapes. The mesh is loaded when the OpenGL viewer starts. Its source and
+modifications are documented in
+[`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt); it is
+licensed under CC BY 3.0. The model is intended for educational visualization,
+not clinical use.
 
 ## How to compile and run
 

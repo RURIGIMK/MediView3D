@@ -5,6 +5,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <cstring>
+#include <fstream>
+#include <string>
+#include <cstdint>
+#include <vector>
 
 namespace {
 int W=1280,H=800; float yaw=-18,pitch=5,zoom=1; bool skeleton=true,organs=true,vessels=true,gridOn=true,drag=false; double px=0,py=0;
@@ -12,18 +16,36 @@ constexpr float PI=3.14159265f;
 struct V{float x,y,z;};
 V add(V a,V b){return {a.x+b.x,a.y+b.y,a.z+b.z};} V sub(V a,V b){return {a.x-b.x,a.y-b.y,a.z-b.z};} V mul(V a,float s){return {a.x*s,a.y*s,a.z*s};}
 float norm(V a){return std::sqrt(a.x*a.x+a.y*a.y+a.z*a.z);}
+GLuint skeletonList=0;
+bool loadSkeleton(const std::string& path){
+ std::ifstream file(path,std::ios::binary); if(!file){std::cerr<<"Could not open skeleton mesh: "<<path<<'\n';return false;}
+ std::string line; std::size_t vertexCount=0,faceCount=0;
+ if(!std::getline(file,line)||line!="ply"){std::cerr<<"Invalid PLY skeleton mesh.\n";return false;}
+ bool binary=false,headerDone=false;
+ while(std::getline(file,line)){
+  if(line=="format binary_little_endian 1.0")binary=true;
+  else if(line.rfind("element vertex ",0)==0)vertexCount=std::stoull(line.substr(15));
+  else if(line.rfind("element face ",0)==0)faceCount=std::stoull(line.substr(13));
+  else if(line=="end_header"){headerDone=true;break;}
+ }
+ if(!headerDone||!binary||vertexCount==0||faceCount==0){std::cerr<<"Unsupported or empty PLY skeleton mesh.\n";return false;}
+ std::vector<V> vertices(vertexCount);
+ for(auto& p:vertices){float xyz[3];if(!file.read(reinterpret_cast<char*>(xyz),sizeof(xyz))){std::cerr<<"Truncated skeleton vertex data.\n";return false;}p={xyz[0],xyz[1],xyz[2]};}
+ skeletonList=glGenLists(1);if(!skeletonList)return false;glNewList(skeletonList,GL_COMPILE);glColor3f(.84f,.87f,.91f);glBegin(GL_TRIANGLES);
+ for(std::size_t i=0;i<faceCount;++i){std::uint8_t n=0;std::int32_t ids[3];if(!file.read(reinterpret_cast<char*>(&n),1)||n!=3||!file.read(reinterpret_cast<char*>(ids),sizeof(ids))){glEnd();glEndList();glDeleteLists(skeletonList,1);skeletonList=0;std::cerr<<"Invalid skeleton triangle data.\n";return false;}
+  if(ids[0]<0||ids[1]<0||ids[2]<0||std::size_t(ids[0])>=vertexCount||std::size_t(ids[1])>=vertexCount||std::size_t(ids[2])>=vertexCount){glEnd();glEndList();glDeleteLists(skeletonList,1);skeletonList=0;std::cerr<<"Skeleton face index is out of range.\n";return false;}
+  const V a=vertices[ids[0]],b=vertices[ids[1]],c=vertices[ids[2]];const V ab=sub(b,a),ac=sub(c,a);V normal{ab.y*ac.z-ab.z*ac.y,ab.z*ac.x-ab.x*ac.z,ab.x*ac.y-ab.y*ac.x};const float length=norm(normal);if(length>1e-12f)normal=mul(normal,1.f/length);glNormal3f(normal.x,normal.z,-normal.y);
+  for(const V p:{a,b,c})glVertex3f(p.x,p.z,-p.y);
+ }
+ glEnd();glEndList();return true;
+}
 void col(float r,float g,float b){glColor3f(r,g,b);}
 void sphere(V c,V s,float r,float g,float b){
  col(r,g,b); for(int j=0;j<16;++j){float p0=-PI/2+PI*j/16,p1=-PI/2+PI*(j+1)/16;glBegin(GL_QUAD_STRIP);for(int i=0;i<=24;++i){float t=2*PI*i/24;for(float p:{p1,p0}){V q{std::cos(p)*std::cos(t),std::sin(p),std::cos(p)*std::sin(t)};glNormal3f(q.x,q.y,q.z);glVertex3f(c.x+q.x*s.x,c.y+q.y*s.y,c.z+q.z*s.z);}}glEnd();}
 }
 void tube(V a,V b,float rad,float r,float g,float blue){V d=sub(b,a);float L=norm(d);if(L<.001f)return;V u=mul(d,1/L),ref=std::fabs(u.y)<.9f?V{0,1,0}:V{1,0,0};V v{u.y*ref.z-u.z*ref.y,u.z*ref.x-u.x*ref.z,u.x*ref.y-u.y*ref.x};v=mul(v,1/norm(v));V w{u.y*v.z-u.z*v.y,u.z*v.x-u.x*v.z,u.x*v.y-u.y*v.x};col(r,g,blue);glBegin(GL_QUAD_STRIP);for(int i=0;i<=12;++i){float t=2*PI*i/12;V o=mul(add(mul(v,std::cos(t)),mul(w,std::sin(t))),rad);glVertex3f(a.x+o.x,a.y+o.y,a.z+o.z);glVertex3f(b.x+o.x,b.y+o.y,b.z+o.z);}glEnd();sphere(a,{rad,rad,rad},r,g,blue);sphere(b,{rad,rad,rad},r,g,blue);}
-void bone(V a,V b,float r=.027f){tube(a,b,r,.79f,.84f,.90f);}
 void drawSkeleton(){
- sphere({0,1.62f,0},{.15f,.19f,.12f},.84f,.88f,.93f);
- for(int i=0;i<9;++i)sphere({0,1.34f-i*.075f,0},{.035f,.04f,.04f},.84f,.88f,.93f);
- for(int i=0;i<5;++i){float y=1.28f-i*.095f,rx=.18f-i*.012f;bone({-.025f,y,0},{-rx,y-.03f,.015f},.011f);bone({.025f,y,0},{rx,y-.03f,.015f},.011f);}
- bone({-.17f,.72f,0},{0,.78f,0},.05f);bone({0,.78f,0},{.17f,.72f,0},.05f);
- for(float s:{-1.f,1.f}){V sh{s*.22f,1.28f,0},el{s*.39f,.98f,.01f},wr{s*.45f,.72f,.03f};bone(sh,el,.032f);bone(el,wr,.025f);bone(wr,{s*.46f,.61f,.04f},.018f);for(int i=0;i<4;++i)bone({s*.46f,.63f,.04f},{s*(.44f+i*.018f),.56f,.04f},.007f);V hip{s*.09f,.66f,0},knee{s*.12f,.30f,.01f},ank{s*.13f,-.08f,.02f};bone(hip,knee,.045f);bone(knee,ank,.033f);bone(ank,{s*.13f,-.14f,.12f},.023f);}
+ glPushMatrix();glTranslatef(0,-.18f,0);glCallList(skeletonList);glPopMatrix();
 }
 void drawOrgans(){sphere({-.065f,1.13f,.07f},{.07f,.13f,.055f},.76f,.22f,.28f);sphere({.065f,1.13f,.07f},{.07f,.13f,.055f},.76f,.22f,.28f);sphere({.02f,.95f,.085f},{.105f,.13f,.055f},.82f,.38f,.22f);sphere({-.06f,.82f,.08f},{.07f,.06f,.045f},.82f,.58f,.30f);sphere({.06f,.82f,.08f},{.07f,.06f,.045f},.82f,.58f,.30f);sphere({0,.68f,.07f},{.08f,.055f,.05f},.58f,.28f,.56f);}
 void drawVessels(){tube({0,1.4f,.12f},{0,.7f,.12f},.014f,.96f,.25f,.32f);for(float s:{-1.f,1.f}){tube({0,1.29f,.12f},{s*.22f,1.25f,.09f},.014f,.96f,.25f,.32f);tube({s*.22f,1.25f,.09f},{s*.4f,.98f,.07f},.012f,.96f,.25f,.32f);tube({s*.4f,.98f,.07f},{s*.45f,.72f,.06f},.01f,.96f,.25f,.32f);tube({0,.72f,.12f},{s*.1f,.64f,.08f},.014f,.96f,.25f,.32f);tube({s*.1f,.64f,.08f},{s*.12f,.3f,.07f},.011f,.96f,.25f,.32f);tube({s*.12f,.3f,.07f},{s*.13f,-.07f,.06f},.008f,.96f,.25f,.32f);}}
@@ -32,7 +54,7 @@ void bitmap(float x,float y,const char* str,float scale=1.4f){
  const char* chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";glBegin(GL_QUADS);for(;*str;++str){char c=*str;if(c>='a'&&c<='z')c=char(c-32);const char*p=std::strchr(chars,c);if(p){int n=int(p-chars);for(int j=0;j<7;++j)for(int i=0;i<5;++i)if(g[n][j]&(1<<(4-i))){float xx=x+i*scale,yy=y+(6-j)*scale;glVertex2f(xx,yy);glVertex2f(xx+scale*.8f,yy);glVertex2f(xx+scale*.8f,yy+scale*.8f);glVertex2f(xx,yy+scale*.8f);}}x+=6*scale;}glEnd();
 }
 void txt(float x,float y,const char*s,float r,float g,float b,float z=1.3f){col(r,g,b);bitmap(x,y,s,z);}
-void ui(){glMatrixMode(GL_PROJECTION);glPushMatrix();glLoadIdentity();glOrtho(0,W,0,H,-1,1);glMatrixMode(GL_MODELVIEW);glPushMatrix();glLoadIdentity();glDisable(GL_DEPTH_TEST);col(.035f,.055f,.085f);glBegin(GL_QUADS);glVertex2f(0,H-86);glVertex2f(W,H-86);glVertex2f(W,H);glVertex2f(0,H);glEnd();txt(25,H-35,"MEDIVIEW 3D",.25f,.86f,.73f,2.5f);txt(27,H-59,"INTERACTIVE ANATOMY STUDY",.65f,.75f,.85f,1.2f);txt(25,H-119,"ANATOMY EXPLORER",.92f,.95f,1,1.7f);txt(25,H-145,"ROTATE: LEFT MOUSE DRAG",.65f,.77f,.88f);txt(25,H-168,"ZOOM: WHEEL OR PLUS MINUS",.65f,.77f,.88f);txt(25,H-191,"RESET VIEW: R",.65f,.77f,.88f);txt(25,H-230,"LAYERS",.25f,.86f,.73f,1.5f);txt(25,H-254,skeleton?"1 SKELETON ON":"1 SKELETON OFF",.83f,.86f,.91f);txt(25,H-277,organs?"2 ORGANS ON":"2 ORGANS OFF",.95f,.58f,.45f);txt(25,H-300,vessels?"3 VESSELS ON":"3 VESSELS OFF",.97f,.38f,.42f);txt(25,H-323,gridOn?"G GRID ON":"G GRID OFF",.65f,.77f,.88f);txt(25,45,"SCHEMATIC MODEL",.97f,.68f,.32f,1.4f);txt(25,25,"GRAPHICS LEARNING ONLY - NOT FOR CLINICAL USE",.6f,.69f,.78f,1.0f);
+void ui(){glMatrixMode(GL_PROJECTION);glPushMatrix();glLoadIdentity();glOrtho(0,W,0,H,-1,1);glMatrixMode(GL_MODELVIEW);glPushMatrix();glLoadIdentity();glDisable(GL_DEPTH_TEST);col(.035f,.055f,.085f);glBegin(GL_QUADS);glVertex2f(0,H-86);glVertex2f(W,H-86);glVertex2f(W,H);glVertex2f(0,H);glEnd();txt(25,H-35,"MEDIVIEW 3D",.25f,.86f,.73f,2.5f);txt(27,H-59,"INTERACTIVE ANATOMY STUDY",.65f,.75f,.85f,1.2f);txt(25,H-119,"ANATOMY EXPLORER",.92f,.95f,1,1.7f);txt(25,H-145,"ROTATE: LEFT MOUSE DRAG",.65f,.77f,.88f);txt(25,H-168,"ZOOM: WHEEL OR PLUS MINUS",.65f,.77f,.88f);txt(25,H-191,"RESET VIEW: R",.65f,.77f,.88f);txt(25,H-230,"LAYERS",.25f,.86f,.73f,1.5f);txt(25,H-254,skeleton?"1 SKELETON ON":"1 SKELETON OFF",.83f,.86f,.91f);txt(25,H-277,organs?"2 ORGANS ON":"2 ORGANS OFF",.95f,.58f,.45f);txt(25,H-300,vessels?"3 VESSELS ON":"3 VESSELS OFF",.97f,.38f,.42f);txt(25,H-323,gridOn?"G GRID ON":"G GRID OFF",.65f,.77f,.88f);txt(25,45,"SCAN BASED SKELETON",.97f,.68f,.32f,1.4f);txt(25,25,"GRAPHICS LEARNING ONLY - NOT FOR CLINICAL USE",.6f,.69f,.78f,1.0f);
  float x=W-230.f;col(.055f,.08f,.12f);glBegin(GL_QUADS);glVertex2f(x,110);glVertex2f(W-18,110);glVertex2f(W-18,H-110);glVertex2f(x,H-110);glEnd();txt(x+16,H-140,"MODEL KEY",.25f,.86f,.73f,1.5f);col(.84f,.88f,.93f);glBegin(GL_QUADS);glVertex2f(x+16,H-169);glVertex2f(x+29,H-169);glVertex2f(x+29,H-156);glVertex2f(x+16,H-156);glEnd();txt(x+39,H-168,"BONE",.84f,.88f,.93f);col(.80f,.34f,.30f);glBegin(GL_QUADS);glVertex2f(x+16,H-197);glVertex2f(x+29,H-197);glVertex2f(x+29,H-184);glVertex2f(x+16,H-184);glEnd();txt(x+39,H-196,"ORGANS",.9f,.65f,.6f);col(.96f,.25f,.32f);glBegin(GL_QUADS);glVertex2f(x+16,H-225);glVertex2f(x+29,H-225);glVertex2f(x+29,H-212);glVertex2f(x+16,H-212);glEnd();txt(x+39,H-224,"VESSELS",.97f,.55f,.58f);glEnable(GL_DEPTH_TEST);glMatrixMode(GL_MODELVIEW);glPopMatrix();glMatrixMode(GL_PROJECTION);glPopMatrix();glMatrixMode(GL_MODELVIEW);}
 void render(){glViewport(0,0,W,H);glClearColor(.025f,.035f,.055f,1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);glEnable(GL_DEPTH_TEST);glEnable(GL_LIGHTING);glEnable(GL_LIGHT0);glEnable(GL_COLOR_MATERIAL);glColorMaterial(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE);GLfloat pos[]={-2,3,4,1},amb[]={.25f,.28f,.34f,1},dif[]={.95f,.96f,1,1};glLightfv(GL_LIGHT0,GL_POSITION,pos);glLightfv(GL_LIGHT0,GL_AMBIENT,amb);glLightfv(GL_LIGHT0,GL_DIFFUSE,dif);glMatrixMode(GL_PROJECTION);glLoadIdentity();double a=double(W)/std::max(1,H),f=1.0/zoom;glFrustum(-.52*a*f,.52*a*f,-.52*f,.52*f,1,30);glMatrixMode(GL_MODELVIEW);glLoadIdentity();glTranslatef(0,0,-5.2f);glRotatef(pitch,1,0,0);glRotatef(yaw,0,1,0);glTranslatef(0,-.72f,0);glDisable(GL_LIGHTING);if(gridOn){col(.12f,.18f,.24f);glBegin(GL_LINES);for(int i=-6;i<=6;++i){glVertex3f(i*.25f,-.2f,-.8f);glVertex3f(i*.25f,-.2f,.8f);glVertex3f(-1.5f,-.2f,i*.25f);glVertex3f(1.5f,-.2f,i*.25f);}glEnd();}glEnable(GL_LIGHTING);if(skeleton)drawSkeleton();if(organs)drawOrgans();if(vessels)drawVessels();glDisable(GL_LIGHTING);ui();}
 void key(GLFWwindow*w,int k,int,int act,int){if(act!=GLFW_PRESS&&act!=GLFW_REPEAT)return;switch(k){case GLFW_KEY_ESCAPE:glfwSetWindowShouldClose(w,1);break;case GLFW_KEY_1:skeleton=!skeleton;break;case GLFW_KEY_2:organs=!organs;break;case GLFW_KEY_3:vessels=!vessels;break;case GLFW_KEY_G:gridOn=!gridOn;break;case GLFW_KEY_R:yaw=-18;pitch=5;zoom=1;break;case GLFW_KEY_EQUAL:case GLFW_KEY_KP_ADD:zoom=std::min(1.8f,zoom+.08f);break;case GLFW_KEY_MINUS:case GLFW_KEY_KP_SUBTRACT:zoom=std::max(.65f,zoom-.08f);break;}}
@@ -41,4 +63,4 @@ void cursor(GLFWwindow*,double x,double y){if(drag){yaw+=float(x-px)*.45f;pitch=
 void scroll(GLFWwindow*,double,double y){zoom=std::clamp(zoom+float(y)*.07f,.65f,1.8f);}
 void resize(GLFWwindow*,int w,int h){W=std::max(1,w);H=std::max(1,h);}
 }
-int main(){if(!glfwInit()){std::cerr<<"GLFW initialization failed.\n";return EXIT_FAILURE;}glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,2);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,1);GLFWwindow*w=glfwCreateWindow(W,H,"MediView3D | Interactive Anatomy Prototype",nullptr,nullptr);if(!w){std::cerr<<"Could not create OpenGL window. Check display/GLFW setup.\n";glfwTerminate();return EXIT_FAILURE;}glfwMakeContextCurrent(w);glfwSwapInterval(1);glfwSetWindowSizeCallback(w,resize);glfwSetKeyCallback(w,key);glfwSetMouseButtonCallback(w,mouse);glfwSetCursorPosCallback(w,cursor);glfwSetScrollCallback(w,scroll);while(!glfwWindowShouldClose(w)){render();glfwSwapBuffers(w);glfwPollEvents();}glfwDestroyWindow(w);glfwTerminate();return EXIT_SUCCESS;}
+int main(){if(!glfwInit()){std::cerr<<"GLFW initialization failed.\n";return EXIT_FAILURE;}glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,2);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,1);GLFWwindow*w=glfwCreateWindow(W,H,"MediView3D | Interactive Anatomy Prototype",nullptr,nullptr);if(!w){std::cerr<<"Could not create OpenGL window. Check display/GLFW setup.\n";glfwTerminate();return EXIT_FAILURE;}glfwMakeContextCurrent(w);if(!loadSkeleton(MEDIVIEW_SKELETON_PATH)){glfwDestroyWindow(w);glfwTerminate();return EXIT_FAILURE;}glfwSwapInterval(1);glfwSetWindowSizeCallback(w,resize);glfwSetKeyCallback(w,key);glfwSetMouseButtonCallback(w,mouse);glfwSetCursorPosCallback(w,cursor);while(!glfwWindowShouldClose(w)){render();glfwSwapBuffers(w);glfwPollEvents();}glDeleteLists(skeletonList,1);glfwDestroyWindow(w);glfwTerminate();return EXIT_SUCCESS;}
