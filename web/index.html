@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#07090e" />
+    <title>MediView 3D | Anatomy Explorer</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+    </script>
+  </head>
+  <body>
+    <canvas id="viewer" aria-label="Interactive 3D anatomy viewer"></canvas>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">M</span><div><strong>MEDIVIEW 3D</strong><small>INTERACTIVE ANATOMY STUDY</small></div></div>
+      <span class="status"><i></i> ANATOMY EXPLORER</span>
+    </header>
+    <aside class="panel controls">
+      <p class="eyebrow">VIEW CONTROLS</p>
+      <h1>Anatomy explorer</h1>
+      <p class="hint">Drag to rotate · Scroll to zoom</p>
+      <button id="reset" class="reset">Reset view <kbd>R</kbd></button>
+      <div class="divider"></div>
+      <p class="eyebrow">MODEL LAYERS</p>
+      <label class="layer"><span class="swatch bone"></span><span><b>Skeleton</b><small>Scan based mesh</small></span><input id="skeleton-toggle" type="checkbox" checked /><i class="switch"></i></label>
+      <label class="layer"><span class="swatch organ"></span><span><b>Organs</b><small>Schematic structures</small></span><input id="organs-toggle" type="checkbox" checked /><i class="switch"></i></label>
+      <label class="layer"><span class="swatch vessel"></span><span><b>Vessels</b><small>Schematic pathways</small></span><input id="vessels-toggle" type="checkbox" checked /><i class="switch"></i></label>
+      <label class="layer"><span class="swatch grid"></span><span><b>Reference grid</b><small>Ground plane</small></span><input id="grid-toggle" type="checkbox" checked /><i class="switch"></i></label>
+      <div id="load-state" class="load-state">Loading scan mesh…</div>
+    </aside>
+    <aside class="panel legend">
+      <p class="eyebrow">MODEL KEY</p>
+      <div><i class="key bone"></i>Bone</div>
+      <div><i class="key organ"></i>Organs</div>
+      <div><i class="key vessel"></i>Vessels</div>
+    </aside>
+    <footer><span>SCAN BASED SKELETON</span><span>GRAPHICS LEARNING ONLY · NOT FOR CLINICAL USE</span></footer>
+    <script type="module" src="./viewer.js"></script>
+  </body>
+</html>

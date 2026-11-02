@@ -70,6 +70,20 @@ modifications are documented in
 licensed under CC BY 3.0. The model is intended for educational visualization,
 not clinical use.
 
+### Browser viewer
+
+The `web/` folder contains a browser version of the anatomy viewer. It loads the
+same prepared skeleton mesh and mirrors the desktop viewer's skeleton, organ,
+vessel and grid layers, rotation, zoom and reset controls. The browser viewer
+uses Three.js from jsDelivr and requires an internet connection to load that
+library.
+
+To host it on Render, create a Blueprint from this repository and select the
+`kyle-3d-skeleton-render` branch. The root [`render.yaml`](render.yaml)
+publishes the static viewer and copies the shared skeleton mesh into the web
+output. Once the service is connected, pushes to that branch trigger a new web
+deployment. The existing C++ desktop application remains a separate target.
+
 ## How to compile and run
 
 ### 1. Install the required tools on Ubuntu or WSL

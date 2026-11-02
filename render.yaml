@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mediview3d-web
+    runtime: static
+    branch: kyle-3d-skeleton-render
+    buildCommand: mkdir -p web/assets/skeleton && cp assets/skeleton/skeleton_prepared.ply web/assets/skeleton/skeleton_prepared.ply
+    staticPublishPath: ./web
+    headers:
+      - path: /assets/skeleton/*
+        name: Cache-Control
+        value: public, max-age=86400
