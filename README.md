@@ -6,7 +6,7 @@
 
 ## Project description
 
-We are developing MediView3D as a Computer Graphics project to explore how graphics algorithms can be used to represent and interact with simplified human anatomy. The project combines a C++ graphics-algorithm foundation with an OpenGL desktop prototype. The current prototype renders a schematic 3D skeleton, simplified organ shapes and branching vessels, with controls for rotating the scene, zooming and toggling visual layers.
+We are developing MediView3D as a Computer Graphics project to explore how graphics algorithms can be used to represent and interact with human anatomy. The project combines a C++ graphics-algorithm foundation, an OpenGL desktop application, and a browser based anatomy studio using a scan based skeleton and supplied organ and vessel meshes.
 
 This is an educational graphics prototype, not a clinically accurate anatomical model or a medical diagnostic tool.
 
@@ -50,39 +50,49 @@ The graphics algorithms are implemented in C++ independently of OpenGL. OpenGL i
 
 ### Current 3D visualisation prototype
 
-- Procedurally constructed, simplified skeletal geometry using spheres and connected segments.
-- Stylised organ shapes and branching vessel geometry.
+- Scan based skeleton mesh in the desktop viewer.
+- Stylised organ and vessel shapes in the desktop viewer; supplied named meshes in the browser viewer.
 - Perspective projection and depth testing.
 - Basic OpenGL lighting and colour-based visual layers.
 - Mouse-drag rotation and scroll-wheel zoom.
 - Keyboard controls to show or hide the skeleton, organs, vessels and reference grid.
 - On-screen title, legend, control hints and an educational-use disclaimer.
 
-The organ and vessel shapes are illustrative approximations and are not sourced from medical scans.
+The organ and vessel structures are educational models, not clinically validated segmentations.
 
 ### Skeleton rendering asset
 
-The interactive viewer renders the prepared scan-based skeleton mesh at
-`assets/skeleton/skeleton_prepared.ply` in place of the earlier schematic bone
-shapes. The mesh is loaded when the OpenGL viewer starts. Its source and
-modifications are documented in
-[`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt); it is
-licensed under CC BY 3.0. The model is intended for educational visualization,
-not clinical use.
+The desktop viewer renders the prepared scan-based skeleton mesh at
+`assets/skeleton/skeleton_prepared.ply`. The web viewer uses a Draco-compressed
+glTF export of the supplied Blender scan at `assets/anatomy/skeleton_scan.glb`.
+The Blender source has one joined skeleton mesh and no source materials; the
+web export recenters and scales the scan to metres, decimates it for browser
+rendering, and applies a neutral bone material. Source and license details are
+in [`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt).
 
 ### Browser viewer
 
-The `web/` folder contains a browser version of the anatomy viewer. It loads the
-same prepared skeleton mesh and mirrors the desktop viewer's skeleton, organ,
-vessel and grid layers, rotation, zoom and reset controls. The browser viewer
-uses Three.js from jsDelivr and requires an internet connection to load that
-library.
+The `web/` folder contains the browser anatomy studio. It loads the Blender
+skeleton GLB and the named organ and vessel meshes from the companion OBJ/MTL
+export in `assets/anatomy/`. Its browser structure list, system visibility,
+search, selection details, per-structure opacity, isolation, labels, camera
+presets, pan/rotate/zoom, measurement, guided tour, screenshot capture, and
+saved views operate on those supplied meshes. Three.js and its Draco decoder
+are loaded from jsDelivr, so the viewer needs an internet connection.
+
+The supplied assets cover the scan skeleton, heart, lungs, liver, stomach,
+kidneys, bladder, and named major vessel paths. The supplied Blender scan is a
+single joined object, so its individual bones cannot be selected separately.
+Muscle, nervous, reproductive, and other systems without supplied meshes are
+not shown as available layers.
 
 To host it on Render, create a Blueprint from this repository and select the
 `kyle-3d-skeleton-render` branch. The root [`render.yaml`](render.yaml)
-publishes the static viewer and copies the shared skeleton mesh into the web
-output. Once the service is connected, pushes to that branch trigger a new web
-deployment. The existing C++ desktop application remains a separate target.
+publishes the static viewer and copies its anatomy assets into the web output.
+To host it on Vercel, import the repository with the root directory set to `./`;
+[`vercel.json`](vercel.json) prepares the same static assets. After connecting
+either host to the branch, pushes to that branch trigger a new web deployment.
+The existing C++ desktop application remains a separate target.
 
 ## How to compile and run
 

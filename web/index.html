@@ -3,8 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#07090e" />
-    <title>MediView 3D | Anatomy Explorer</title>
+    <meta name="theme-color" content="#080d14" />
+    <title>MediView 3D | Anatomy Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
     <script type="importmap">
       {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
@@ -13,29 +16,61 @@
   <body>
     <canvas id="viewer" aria-label="Interactive 3D anatomy viewer"></canvas>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">M</span><div><strong>MEDIVIEW 3D</strong><small>INTERACTIVE ANATOMY STUDY</small></div></div>
-      <span class="status"><i></i> ANATOMY EXPLORER</span>
+      <a class="brand" href="#" aria-label="MediView home"><span class="brand-mark">M</span><span><strong>MEDIVIEW <i>3D</i></strong><small>ANATOMY STUDIO</small></span></a>
+      <div class="top-context"><span class="live-dot"></span><span>INTERACTIVE MODEL</span><span class="context-divider"></span><span class="model-name">FULL BODY · ANTERIOR</span></div>
+      <div class="header-actions"><button id="restore-view" class="header-button" title="Restore the saved view">Load view</button><button id="save-view" class="header-button primary" title="Save this view">Save view</button></div>
     </header>
-    <aside class="panel controls">
-      <p class="eyebrow">VIEW CONTROLS</p>
-      <h1>Anatomy explorer</h1>
-      <p class="hint">Drag to rotate · Scroll to zoom</p>
-      <button id="reset" class="reset">Reset view <kbd>R</kbd></button>
-      <div class="divider"></div>
-      <p class="eyebrow">MODEL LAYERS</p>
-      <label class="layer"><span class="swatch bone"></span><span><b>Skeleton</b><small>Scan based mesh</small></span><input id="skeleton-toggle" type="checkbox" checked /><i class="switch"></i></label>
-      <label class="layer"><span class="swatch organ"></span><span><b>Organs</b><small>Schematic structures</small></span><input id="organs-toggle" type="checkbox" checked /><i class="switch"></i></label>
-      <label class="layer"><span class="swatch vessel"></span><span><b>Vessels</b><small>Schematic pathways</small></span><input id="vessels-toggle" type="checkbox" checked /><i class="switch"></i></label>
-      <label class="layer"><span class="swatch grid"></span><span><b>Reference grid</b><small>Ground plane</small></span><input id="grid-toggle" type="checkbox" checked /><i class="switch"></i></label>
-      <div id="load-state" class="load-state">Loading scan mesh…</div>
+
+    <aside class="panel anatomy-panel">
+      <div class="panel-heading"><div><p class="eyebrow">MODEL EXPLORER</p><h1>Anatomy</h1></div><span id="structure-count" class="count">—</span></div>
+      <label class="search-box"><span>⌕</span><input id="structure-search" type="search" placeholder="Search anatomy" autocomplete="off" /><kbd>/</kbd></label>
+      <div class="system-title"><span>ANATOMICAL SYSTEMS</span><button id="reset-layers" class="text-button">Reset</button></div>
+      <div id="system-list" class="system-list" aria-label="Anatomical system visibility"></div>
+      <p class="interaction-hint">Drag to rotate · right-drag to pan · scroll to zoom</p>
+      <div class="browser-heading"><span>STRUCTURES</span><span id="visible-count">Loading model</span></div>
+      <div id="structure-list" class="structure-list" aria-label="Anatomical structure browser"></div>
+      <div id="load-state" class="load-state"><span class="spinner"></span><span>Preparing anatomical model…</span></div>
     </aside>
-    <aside class="panel legend">
-      <p class="eyebrow">MODEL KEY</p>
-      <div><i class="key bone"></i>Bone</div>
-      <div><i class="key organ"></i>Organs</div>
-      <div><i class="key vessel"></i>Vessels</div>
+
+    <aside class="panel info-panel">
+      <div class="info-heading"><span class="eyebrow">STRUCTURE DETAILS</span><button id="clear-selection" class="icon-button small" title="Clear selection" aria-label="Clear selection">×</button></div>
+      <div id="empty-info" class="empty-info"><span class="info-glyph">✳</span><b>Select a structure</b><p>Choose an anatomical structure in the model or browser to explore its details.</p></div>
+      <div id="structure-info" class="structure-info" hidden>
+        <span id="info-system" class="system-chip"></span>
+        <h2 id="info-name"></h2>
+        <p id="info-location" class="info-location"></p>
+        <div class="info-divider"></div>
+        <span class="eyebrow">PRIMARY FUNCTION</span>
+        <p id="info-function" class="info-copy"></p>
+        <details class="description-details"><summary>About this structure</summary><p id="info-description"></p></details>
+        <div class="info-divider"></div>
+        <label class="opacity-label" for="opacity-slider"><span>Structure opacity</span><output id="opacity-value">100%</output></label>
+        <input id="opacity-slider" class="range" type="range" min="15" max="100" value="100" />
+        <button id="isolate" class="secondary-button">◉ <span>Isolate structure</span></button>
+      </div>
+      <div id="isolate-state" class="isolate-state" hidden><span>Isolation view is active</span><button id="show-all" class="text-button">Show all</button></div>
     </aside>
-    <footer><span>SCAN BASED SKELETON</span><span>GRAPHICS LEARNING ONLY · NOT FOR CLINICAL USE</span></footer>
+
+    <div class="view-toolbar panel" aria-label="Camera view presets">
+      <span class="toolbar-label">VIEW</span>
+      <button data-view="front" class="view-button active">Front</button><button data-view="back" class="view-button">Back</button><button data-view="left" class="view-button">Left</button><button data-view="right" class="view-button">Right</button><button data-view="top" class="view-button">Top</button><button data-view="bottom" class="view-button">Bottom</button>
+    </div>
+
+    <div class="action-toolbar panel">
+      <button id="measure" class="tool-button" title="Measure distance between two points">⌁ <span>Measure</span></button>
+      <button id="labels" class="tool-button selected" title="Toggle structure labels">Aa <span>Labels</span></button>
+      <span class="toolbar-separator"></span>
+      <button id="guided-tour" class="tool-button tour-button">▷ <span>Guided tour</span></button>
+      <button id="screenshot" class="tool-button" title="Save a screenshot">▧ <span>Capture</span></button>
+      <button id="reset-camera" class="tool-button" title="Reset camera position">↺ <span>Reset view</span></button>
+    </div>
+
+    <div id="annotation" class="annotation" hidden></div>
+    <div id="measure-hint" class="measure-hint" hidden>Click two points on the model to measure <button id="cancel-measure">Cancel</button></div>
+    <div id="tour-card" class="tour-card panel" hidden><div><span class="eyebrow">GUIDED EXPLORATION</span><b id="tour-title"></b><span id="tour-progress"></span></div><button id="tour-next" class="tour-next">Next →</button><button id="tour-close" class="icon-button small">×</button></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <footer class="disclaimer"><span>EDUCATIONAL VISUALIZATION</span><span>Not for diagnosis or treatment</span></footer>
+
     <script type="module" src="./viewer.js"></script>
   </body>
 </html>
