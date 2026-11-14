@@ -23,7 +23,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.02;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -39,21 +39,24 @@ controls.maxPolarAngle = Math.PI * 0.95;
 controls.screenSpacePanning = true;
 controls.update();
 
-scene.add(new THREE.HemisphereLight(0xcbd8e6, 0x282b35, 2.0));
+scene.add(new THREE.HemisphereLight(0xcbd8e6, 0x282b35, 1.35));
 const keyLight = new THREE.DirectionalLight(0xf5f6ff, 3.0);
 keyLight.position.set(-2.5, 4, 3);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(1024, 1024);
 scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(0x87b8d1, 1.3);
+const fillLight = new THREE.DirectionalLight(0x87b8d1, 0.9);
 fillLight.position.set(2, 1.2, -3);
 scene.add(fillLight);
-const rimLight = new THREE.PointLight(0x43bea9, 0.75, 8);
+const rimLight = new THREE.PointLight(0x43bea9, 0.45, 8);
 rimLight.position.set(0, -0.2, -2.3);
 scene.add(rimLight);
 
 const anatomyRoot = new THREE.Group();
 scene.add(anatomyRoot);
+const namedAnatomyRoot = new THREE.Group();
+namedAnatomyRoot.name = 'Registered anatomy layers';
+anatomyRoot.add(namedAnatomyRoot);
 const anatomyLabelDefinitions = {
   Lung_R: { text: 'RIGHT LUNG', x: -58, y: -9, align: 'right' },
   Lung_L: { text: 'LEFT LUNG', x: 58, y: -9, align: 'left' },
@@ -65,6 +68,7 @@ const anatomyLabelDefinitions = {
   Bladder: { text: 'BLADDER', x: 0, y: 25, align: 'center' },
 };
 const anatomyLabelNodes = new Map();
+const anatomyLeaderLines = new Map();
 const categoryDefinitions = [
   { id: 'skeleton', label: 'Skeleton', color: '#cbd5df' },
   { id: 'cardiovascular', label: 'Cardiovascular', color: '#e96773' },
@@ -108,8 +112,7 @@ const displayNames = {
 const systems = new Map(categoryDefinitions.map((category) => [category.id, { ...category, visible: true, group: new THREE.Group(), structures: [] }]));
 for (const system of systems.values()) {
   system.group.name = system.label;
-  if (system.id !== 'skeleton') system.group.position.y = -0.83;
-  anatomyRoot.add(system.group);
+  (system.id === 'skeleton' ? anatomyRoot : namedAnatomyRoot).add(system.group);
 }
 
 const grid = new THREE.GridHelper(3.2, 16, 0x40566b, 0x293b4c);
@@ -221,15 +224,15 @@ const vesselRoutes = {
   Aorta_Central: { radius: 0.013, points: [[-.015,.72,.025],[-.015,.91,.025],[-.015,1.12,.025],[-.015,1.29,.025],[-.012,1.35,.02],[-.03,1.39,.015],[-.065,1.41,.01],[-.055,1.40,.01],[-.035,1.38,.015],[-.025,1.36,.025]] },
   VenaCava_Central: { radius: 0.011, points: [[.018,.72,.015],[.018,.91,.015],[.018,1.10,.01],[.018,1.23,.015],[.018,1.30,.02]] },
   Carotid_L: { radius: 0.0065, points: [[-.025,1.36,.025],[-.028,1.42,.025],[-.031,1.50,.02],[-.035,1.62,.015]] },
-  Carotid_R: { radius: 0.0065, points: [[.025,1.36,.025],[.028,1.42,.025],[.031,1.50,.02],[.035,1.62,.015]] },
+  Carotid_R: { radius: 0.0065, points: [[-.025,1.36,.025],[.028,1.42,.025],[.031,1.50,.02],[.035,1.62,.015]] },
   Artery_Arm_L: { radius: 0.005, points: [[-.015,1.32,.025],[-.06,1.35,.02],[-.14,1.36,.015],[-.21,1.32,.01],[-.27,1.25,.005],[-.33,1.15,.005],[-.38,1.04,.005]] },
   Vein_Arm_L: { radius: 0.0055, points: [[.018,1.30,.005],[-.065,1.34,.005],[-.15,1.35,0],[-.22,1.30,0],[-.29,1.23,0],[-.35,1.14,0],[-.39,1.04,0]] },
   Artery_Arm_R: { radius: 0.005, points: [[-.015,1.32,.025],[.06,1.35,.02],[.14,1.36,.015],[.21,1.32,.01],[.27,1.25,.005],[.33,1.15,.005],[.38,1.04,.005]] },
   Vein_Arm_R: { radius: 0.0055, points: [[.018,1.30,.005],[.065,1.34,.005],[.15,1.35,0],[.22,1.30,0],[.29,1.23,0],[.35,1.14,0],[.39,1.04,0]] },
-  Artery_Leg_L: { radius: 0.006, points: [[-.015,.72,.025],[-.03,.68,.025],[-.07,.64,.025],[-.105,.59,.025],[-.12,.51,.025],[-.13,.39,.025],[-.12,.28,.02]] },
-  Vein_Leg_L: { radius: 0.0065, points: [[.018,.72,.005],[-.03,.68,.005],[-.075,.63,.005],[-.11,.57,.005],[-.13,.49,.005],[-.14,.38,.005],[-.13,.28,.005]] },
-  Artery_Leg_R: { radius: 0.006, points: [[-.015,.72,.025],[.03,.68,.025],[.07,.64,.025],[.105,.59,.025],[.12,.51,.025],[.13,.39,.025],[.12,.28,.02]] },
-  Vein_Leg_R: { radius: 0.0065, points: [[.018,.72,.005],[.03,.68,.005],[.075,.63,.005],[.11,.57,.005],[.13,.49,.005],[.14,.38,.005],[.13,.28,.005]] },
+  Artery_Leg_L: { radius: 0.006, points: [[-.015,.72,.025],[-.03,.68,.025],[-.07,.64,.025],[-.105,.59,.025],[-.12,.51,.025],[-.13,.39,.025],[-.12,.28,.02],[-.115,.16,.02],[-.12,.04,.018],[-.14,-.08,.015],[-.14,-.16,.012]] },
+  Vein_Leg_L: { radius: 0.0065, points: [[.018,.72,.005],[-.03,.68,.005],[-.075,.63,.005],[-.11,.57,.005],[-.13,.49,.005],[-.14,.38,.005],[-.13,.28,.005],[-.125,.16,.005],[-.13,.04,.005],[-.15,-.08,.005],[-.15,-.16,.005]] },
+  Artery_Leg_R: { radius: 0.006, points: [[-.015,.72,.025],[.03,.68,.025],[.07,.64,.025],[.105,.59,.025],[.12,.51,.025],[.13,.39,.025],[.12,.28,.02],[.115,.16,.02],[.12,.04,.018],[.14,-.08,.015],[.14,-.16,.012]] },
+  Vein_Leg_R: { radius: 0.0065, points: [[.018,.72,.005],[.03,.68,.005],[.075,.63,.005],[.11,.57,.005],[.13,.49,.005],[.14,.38,.005],[.13,.28,.005],[.125,.16,.005],[.13,.04,.005],[.15,-.08,.005],[.15,-.16,.005]] },
 };
 function refineVessel(object, name) {
   const route = vesselRoutes[name];
@@ -279,12 +282,24 @@ function loadNamedAnatomy() {
       const loader = new OBJLoader();
       loader.setMaterials(materials);
       loader.load('/assets/anatomy/mediview_anatomy.obj', (root) => {
+        root.updateMatrixWorld(true);
+        const sourceBounds = new THREE.Box3().setFromObject(root);
+        const scanBounds = structures.get('Human skeleton')?.bounds;
+        if (scanBounds && !sourceBounds.isEmpty() && !scanBounds.isEmpty()) {
+          const sourceSize = sourceBounds.getSize(new THREE.Vector3());
+          const scanSize = scanBounds.getSize(new THREE.Vector3());
+          const sourceCenter = sourceBounds.getCenter(new THREE.Vector3());
+          const scanCenter = scanBounds.getCenter(new THREE.Vector3());
+          const registrationScale = scanSize.y / sourceSize.y;
+          namedAnatomyRoot.scale.setScalar(registrationScale);
+          namedAnatomyRoot.position.copy(scanCenter).addScaledVector(sourceCenter, -registrationScale);
+          namedAnatomyRoot.updateMatrixWorld(true);
+        }
         for (const object of root.children) {
           if (!includedObjStructures.test(object.name)) continue;
           const meta = metadataFor(object.name);
           if (!meta) continue;
           refineVessel(object, object.name);
-          object.scale.x *= -1;
           recordFromObject(object.name, object, meta.category);
         }
         buildSystemControls();
@@ -438,9 +453,12 @@ function fitCameraToModel(root) {
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
   controls.target.copy(center);
-  camera.position.set(center.x, center.y + 0.04, center.z + Math.max(3.5, size.y * 2.18));
-  controls.minDistance = Math.max(0.45, size.y * 0.88);
-  controls.maxDistance = Math.max(7, size.y * 7.5);
+  const verticalDistance = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.8);
+  const horizontalDistance = size.x / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * camera.aspect * 0.72);
+  const distance = Math.max(verticalDistance, horizontalDistance, 1.35);
+  camera.position.set(center.x, center.y + 0.025, center.z + distance);
+  controls.minDistance = Math.max(0.4, size.y * 0.58);
+  controls.maxDistance = Math.max(7, size.y * 5.5);
   controls.update();
 }
 function applyIsolation() {
@@ -488,8 +506,11 @@ function updateAnnotation() {
 }
 function buildAnatomyLabels() {
   const container = $('#anatomy-labels');
-  container.replaceChildren();
+  const leaderSvg = container.querySelector('.label-leaders');
+  container.replaceChildren(leaderSvg);
+  leaderSvg.replaceChildren();
   anatomyLabelNodes.clear();
+  anatomyLeaderLines.clear();
   for (const [key, definition] of Object.entries(anatomyLabelDefinitions)) {
     if (!structures.has(key)) continue;
     const label = document.createElement('button');
@@ -498,8 +519,12 @@ function buildAnatomyLabels() {
     label.dataset.align = definition.align;
     label.textContent = definition.text;
     label.addEventListener('click', () => selectStructure(structures.get(key), { focus: false }));
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.dataset.structure = key;
+    leaderSvg.append(line);
     container.append(label);
     anatomyLabelNodes.set(key, label);
+    anatomyLeaderLines.set(key, line);
   }
   updateAnatomyLabels();
 }
@@ -507,17 +532,40 @@ function updateAnatomyLabels() {
   const container = $('#anatomy-labels');
   container.hidden = !labelsEnabled;
   if (!labelsEnabled) return;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const pending = [];
   for (const [key, label] of anatomyLabelNodes) {
+    const line = anatomyLeaderLines.get(key);
     const record = structures.get(key);
-    if (!record || record === selectedRecord || !isAnatomyVisible(record.root)) { label.hidden = true; continue; }
+    if (!record || record === selectedRecord || !isAnatomyVisible(record.root)) { label.hidden = true; line.style.display = 'none'; continue; }
     const point = record.bounds.getCenter(new THREE.Vector3()).project(camera);
-    if (point.z < -1 || point.z > 1) { label.hidden = true; continue; }
-    const definition = anatomyLabelDefinitions[key];
-    const x = (point.x * 0.5 + 0.5) * window.innerWidth + definition.x;
-    const y = (-point.y * 0.5 + 0.5) * window.innerHeight + definition.y;
-    label.style.left = `${x}px`;
-    label.style.top = `${y}px`;
-    label.hidden = false;
+    const x = (point.x * 0.5 + 0.5) * width;
+    const y = (-point.y * 0.5 + 0.5) * height;
+    if (point.z < -1 || point.z > 1 || x < 0 || x > width || y < 64 || y > height - 45) { label.hidden = true; line.style.display = 'none'; continue; }
+    pending.push({ key, label, x, y, side: anatomyLabelDefinitions[key].align === 'right' ? -1 : anatomyLabelDefinitions[key].align === 'left' ? 1 : 0, targetY: y + anatomyLabelDefinitions[key].y });
+  }
+  for (const side of [-1, 1, 0]) {
+    const sideLabels = pending.filter((item) => item.side === side).sort((a, b) => a.targetY - b.targetY);
+    let previousY = 56;
+    for (const item of sideLabels) {
+      item.label.hidden = false;
+      const labelHeight = item.label.offsetHeight || 20;
+      const y = Math.max(item.targetY, previousY + (labelHeight + 8) * 0.5);
+      item.yPlaced = Math.min(y, height - 42);
+      previousY = item.yPlaced + (labelHeight + 8) * 0.5;
+    }
+    for (const item of sideLabels) {
+      const offset = item.side === 0 ? 28 : 82;
+      const labelX = THREE.MathUtils.clamp(item.x + item.side * offset, 112, width - 112);
+      item.label.style.left = `${labelX}px`;
+      item.label.style.top = `${item.yPlaced}px`;
+      item.label.dataset.align = item.side < 0 ? 'right' : item.side > 0 ? 'left' : 'center';
+      const endX = labelX;
+      line.setAttribute('x1', `${item.x}`); line.setAttribute('y1', `${item.y}`);
+      line.setAttribute('x2', `${endX}`); line.setAttribute('y2', `${item.yPlaced}`);
+      line.style.display = '';
+    }
   }
 }
 function showToast(message) {
@@ -577,8 +625,8 @@ $('#opacity-slider').addEventListener('input', (event) => {
 });
 
 const viewDirections = {
-  front: { direction: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0), label: 'ANTERIOR' },
-  back: { direction: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0), label: 'POSTERIOR' },
+  front: { direction: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0), label: 'ANTERIOR' },
+  back: { direction: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0), label: 'POSTERIOR' },
   left: { direction: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0), label: 'LEFT LATERAL' },
   right: { direction: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0), label: 'RIGHT LATERAL' },
   top: { direction: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, -1), label: 'SUPERIOR' },
@@ -695,7 +743,7 @@ window.addEventListener('resize', () => {
 controls.addEventListener('change', updateAnnotation);
 
 setLoadText('Loading high detail scan mesh…');
-Promise.all([loadSkeleton(), loadNamedAnatomy()]).then(() => {
+loadSkeleton().then(() => loadNamedAnatomy()).then(() => {
   setLoadText(`${structures.size} structures · Artec Group scan · CC BY 3.0`);
   updateStructureCount(); buildSystemControls(); buildStructureBrowser();
   buildAnatomyLabels();

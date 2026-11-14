@@ -19,13 +19,22 @@ invent missing muscles, nerves, reproductive organs, or other structures.
 Descriptions are concise educational summaries and the supplied anatomy meshes
 are schematic, not clinical segmentations.
 
-The companion OBJ export placed its `L` objects on negative X, opposite the
-project's patient-left convention. The browser reflects these named anatomy
-meshes so left and right labels match the patient, while leaving the scan
-skeleton unchanged. It also uses narrower, smooth tube paths for the supplied
-artery and vein routes so they read as connected branches alongside the bones.
-The included vessel data remains simplified and is not a complete vascular
+The named OBJ anatomy uses negative Z for the anterior side: the sternum lies
+in front of the vertebral column, and the paired `L` structures occupy
+negative X. The viewer uses a negative-Z anterior camera, keeps the supplied
+left/right mesh orientation intact, and labels sides from the patient's
+perspective. It also uses narrower, smooth tube paths for the supplied artery
+and vein routes so they read as connected branches alongside the bones. The
+included vessel data remains simplified and is not a complete vascular
 segmentation.
+
+The browser measures the companion OBJ and skeleton scan bounds, then applies
+one uniform scale and translation to the named anatomy group so both layers
+share the same origin and body height. The initial camera fits the complete
+scan to the available view. Front-view organ labels project from each mesh
+center and use leader lines; labels on each side are spaced to reduce overlap.
+Lighting is balanced to preserve bone detail without washing out the scan. The
+source mesh data is unchanged; registration is a scene transform.
 
 ## Controls
 
@@ -38,8 +47,8 @@ segmentation.
   click a system chip to isolate that system.
 - Use the opacity slider or **Isolate structure** in the information panel.
 - **Measure** records the distance between two clicked points in centimetres.
-- Major organs have front-view labels; selecting one replaces its label with a
-  selected-structure callout. **Labels** toggles these annotations.
+- Major organs have front-view labels with leader lines; selecting one replaces
+  its label with a selected-structure callout. **Labels** toggles annotations.
   **Guided tour** visits
   supplied structures. **Capture** downloads a PNG screenshot.
 - **Save view** stores camera and visibility settings in the current browser;

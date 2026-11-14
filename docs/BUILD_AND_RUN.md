@@ -42,5 +42,14 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ``
 
+## Browser anatomy viewer
+From the repository root, start a static server:
+```powershell
+python -m http.server 8000
+```
+Open `http://localhost:8000/web/`. Keep the server rooted at the repository so
+the page can load `assets/anatomy/`. The viewer loads Three.js and its Draco
+decoder from public CDNs, so the browser needs internet access.
+
 ## Troubleshooting
 If the demo target is missing, check whether CMake found OpenGL and GLFW. The pure C++ algorithm target can still build independently. Remove the build directory and configure again after installing dependencies.

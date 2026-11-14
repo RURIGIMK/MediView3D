@@ -77,11 +77,11 @@ skeleton GLB and the named organ and vessel meshes from the companion OBJ/MTL
 export in `assets/anatomy/`. Its browser structure list, system visibility,
 search, selection details, per-structure opacity, isolation, labels, camera
 presets, pan/rotate/zoom, measurement, guided tour, screenshot capture, and
-saved views operate on those supplied meshes. The browser corrects the OBJ
-export's mirrored left/right convention, labels paired organs from the
-patient's perspective, and renders the supplied vessel paths as finer curved
-branches. Three.js and its Draco decoder are loaded from jsDelivr, so the
-viewer needs an internet connection.
+saved views operate on those supplied meshes. The browser uses the source
+anatomy orientation for its anterior camera and patient-side labels, and
+renders the supplied vessel paths as finer curved branches. Three.js and its
+Draco decoder are loaded from jsDelivr, so the viewer needs an internet
+connection.
 
 The supplied assets cover the scan skeleton, heart, lungs, liver, stomach,
 kidneys, bladder, and named major vessel paths. The supplied Blender scan is a
@@ -190,10 +190,10 @@ The current work is a prototype rather than a complete anatomy platform. We stil
 
 ## Known limitations and issues
 
-- The skeleton, organs and vessels are procedurally drawn approximations, not a detailed or medically validated 3D anatomical model.
-- Anatomical structures are not yet selectable and do not have individual educational descriptions.
-- The prototype does not yet include imported anatomical meshes, animation sequences, ray-cast selection, or a true 3D cross-section/clipping workflow.
-- The current renderer uses the OpenGL compatibility profile and immediate-mode drawing; a modern shader-based rendering pipeline remains future work.
+- The desktop anatomy remains a schematic visualization. The browser viewer uses the supplied scan and named organ/vessel meshes, which are educational assets rather than clinically validated models.
+- The browser supports selecting supplied structures and viewing concise educational descriptions. The joined skeleton scan does not provide individually selectable bones.
+- Muscle, nervous, reproductive and other systems without supplied meshes are not included. The project does not yet include animation sequences or a 3D cross-section workflow.
+- The desktop renderer uses the OpenGL compatibility profile and immediate-mode drawing; a modern shader-based desktop rendering pipeline remains future work.
 - The scanline fill algorithm is intended for simple polygons and does not handle holes or self-intersecting polygons.
 - GUI support and OpenGL drivers vary by operating system. The desktop window requires a working graphical display.
 - Build success and test results should be verified on the machine used for the submission; performance has not been benchmarked.
