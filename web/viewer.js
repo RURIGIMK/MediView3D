@@ -220,42 +220,6 @@ function loadSkeleton() {
   });
 }
 const includedObjStructures = /^(Heart|Lung_[LR]|Liver|Stomach|Kidney_[LR]|Bladder|Aorta_Central|VenaCava_Central|Carotid_[LR]|Artery_(Arm|Leg)_[LR]|Vein_(Arm|Leg)_[LR])$/;
-const vesselRoutes = {
-  Aorta_Central: { radius: 0.013, points: [[-.015,.72,.025],[-.015,.91,.025],[-.015,1.12,.025],[-.015,1.29,.025],[-.012,1.35,.02],[-.03,1.39,.015],[-.065,1.41,.01],[-.055,1.40,.01],[-.035,1.38,.015],[-.025,1.36,.025]] },
-  VenaCava_Central: { radius: 0.011, points: [[.018,.72,.015],[.018,.91,.015],[.018,1.10,.01],[.018,1.23,.015],[.018,1.30,.02]] },
-  Carotid_L: { radius: 0.0065, points: [[-.025,1.36,.025],[-.028,1.42,.025],[-.031,1.50,.02],[-.035,1.62,.015]] },
-  Carotid_R: { radius: 0.0065, points: [[-.025,1.36,.025],[.028,1.42,.025],[.031,1.50,.02],[.035,1.62,.015]] },
-  Artery_Arm_L: { radius: 0.005, points: [[-.015,1.32,.025],[-.06,1.35,.02],[-.14,1.36,.015],[-.21,1.32,.01],[-.27,1.25,.005],[-.33,1.15,.005],[-.38,1.04,.005]] },
-  Vein_Arm_L: { radius: 0.0055, points: [[.018,1.30,.005],[-.065,1.34,.005],[-.15,1.35,0],[-.22,1.30,0],[-.29,1.23,0],[-.35,1.14,0],[-.39,1.04,0]] },
-  Artery_Arm_R: { radius: 0.005, points: [[-.015,1.32,.025],[.06,1.35,.02],[.14,1.36,.015],[.21,1.32,.01],[.27,1.25,.005],[.33,1.15,.005],[.38,1.04,.005]] },
-  Vein_Arm_R: { radius: 0.0055, points: [[.018,1.30,.005],[.065,1.34,.005],[.15,1.35,0],[.22,1.30,0],[.29,1.23,0],[.35,1.14,0],[.39,1.04,0]] },
-  Artery_Leg_L: { radius: 0.006, points: [[-.015,.72,.025],[-.03,.68,.025],[-.07,.64,.025],[-.105,.59,.025],[-.12,.51,.025],[-.13,.39,.025],[-.12,.28,.02],[-.115,.16,.02],[-.12,.04,.018],[-.14,-.08,.015],[-.14,-.16,.012]] },
-  Vein_Leg_L: { radius: 0.0065, points: [[.018,.72,.005],[-.03,.68,.005],[-.075,.63,.005],[-.11,.57,.005],[-.13,.49,.005],[-.14,.38,.005],[-.13,.28,.005],[-.125,.16,.005],[-.13,.04,.005],[-.15,-.08,.005],[-.15,-.16,.005]] },
-  Artery_Leg_R: { radius: 0.006, points: [[-.015,.72,.025],[.03,.68,.025],[.07,.64,.025],[.105,.59,.025],[.12,.51,.025],[.13,.39,.025],[.12,.28,.02],[.115,.16,.02],[.12,.04,.018],[.14,-.08,.015],[.14,-.16,.012]] },
-  Vein_Leg_R: { radius: 0.0065, points: [[.018,.72,.005],[.03,.68,.005],[.075,.63,.005],[.11,.57,.005],[.13,.49,.005],[.14,.38,.005],[.13,.28,.005],[.125,.16,.005],[.13,.04,.005],[.15,-.08,.005],[.15,-.16,.005]] },
-};
-function refineVessel(object, name) {
-  const route = vesselRoutes[name];
-  if (!route) return;
-  let material;
-  const previousMeshes = [];
-  object.traverse((child) => { if (child.isMesh) { if (!material) material = child.material; previousMeshes.push(child); } });
-  if (!material) return;
-  const points = route.points.map(([x, y, z]) => new THREE.Vector3(x, y, z));
-  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
-  const geometry = new THREE.TubeGeometry(curve, 42, route.radius, 10, false);
-  geometry.computeVertexNormals();
-  if (object.isMesh) {
-    object.geometry.dispose();
-    object.geometry = geometry;
-    object.material = material;
-  } else {
-    for (const mesh of previousMeshes) mesh.geometry.dispose();
-    object.clear();
-    object.add(new THREE.Mesh(geometry, material));
-  }
-  object.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
-}
 function loadNamedAnatomy() {
   return new Promise((resolve, reject) => {
     const materialLoader = new MTLLoader();
@@ -274,8 +238,8 @@ function loadNamedAnatomy() {
       for (const [name, material] of Object.entries(materials.materials)) {
         if (tissuePalette[name]) material.color.set(tissuePalette[name]);
         if (material.isMeshPhongMaterial) {
-          material.shininess = 18;
-          material.specular.set(0x292e35);
+          material.shininess = 12;
+          material.specular.set(0x181d24);
           material.needsUpdate = true;
         }
       }
@@ -299,7 +263,6 @@ function loadNamedAnatomy() {
           if (!includedObjStructures.test(object.name)) continue;
           const meta = metadataFor(object.name);
           if (!meta) continue;
-          refineVessel(object, object.name);
           recordFromObject(object.name, object, meta.category);
         }
         buildSystemControls();
@@ -453,7 +416,7 @@ function fitCameraToModel(root) {
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
   controls.target.copy(center);
-  const verticalDistance = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.8);
+  const verticalDistance = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.88);
   const horizontalDistance = size.x / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * camera.aspect * 0.72);
   const distance = Math.max(verticalDistance, horizontalDistance, 1.35);
   camera.position.set(center.x, center.y + 0.025, center.z + distance);
