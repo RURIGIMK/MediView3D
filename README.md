@@ -77,8 +77,11 @@ skeleton GLB and the named organ and vessel meshes from the companion OBJ/MTL
 export in `assets/anatomy/`. Its browser structure list, system visibility,
 search, selection details, per-structure opacity, isolation, labels, camera
 presets, pan/rotate/zoom, measurement, guided tour, screenshot capture, and
-saved views operate on those supplied meshes. Three.js and its Draco decoder
-are loaded from jsDelivr, so the viewer needs an internet connection.
+saved views operate on those supplied meshes. The browser corrects the OBJ
+export's mirrored left/right convention, labels paired organs from the
+patient's perspective, and renders the supplied vessel paths as finer curved
+branches. Three.js and its Draco decoder are loaded from jsDelivr, so the
+viewer needs an internet connection.
 
 The supplied assets cover the scan skeleton, heart, lungs, liver, stomach,
 kidneys, bladder, and named major vessel paths. The supplied Blender scan is a
