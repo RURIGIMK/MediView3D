@@ -54,6 +54,17 @@ scene.add(rimLight);
 
 const anatomyRoot = new THREE.Group();
 scene.add(anatomyRoot);
+const anatomyLabelDefinitions = {
+  Lung_R: { text: 'RIGHT LUNG', x: -58, y: -9, align: 'right' },
+  Lung_L: { text: 'LEFT LUNG', x: 58, y: -9, align: 'left' },
+  Heart: { text: 'HEART', x: 58, y: 32, align: 'left' },
+  Liver: { text: 'LIVER', x: -58, y: -7, align: 'right' },
+  Stomach: { text: 'STOMACH', x: 58, y: -7, align: 'left' },
+  Kidney_R: { text: 'RIGHT KIDNEY', x: -56, y: 0, align: 'right' },
+  Kidney_L: { text: 'LEFT KIDNEY', x: 56, y: 0, align: 'left' },
+  Bladder: { text: 'BLADDER', x: 0, y: 25, align: 'center' },
+};
+const anatomyLabelNodes = new Map();
 const categoryDefinitions = [
   { id: 'skeleton', label: 'Skeleton', color: '#cbd5df' },
   { id: 'cardiovascular', label: 'Cardiovascular', color: '#e96773' },
@@ -206,23 +217,80 @@ function loadSkeleton() {
   });
 }
 const includedObjStructures = /^(Heart|Lung_[LR]|Liver|Stomach|Kidney_[LR]|Bladder|Aorta_Central|VenaCava_Central|Carotid_[LR]|Artery_(Arm|Leg)_[LR]|Vein_(Arm|Leg)_[LR])$/;
+const vesselRoutes = {
+  Aorta_Central: { radius: 0.013, points: [[-.015,.72,.025],[-.015,.91,.025],[-.015,1.12,.025],[-.015,1.29,.025],[-.012,1.35,.02],[-.03,1.39,.015],[-.065,1.41,.01],[-.055,1.40,.01],[-.035,1.38,.015],[-.025,1.36,.025]] },
+  VenaCava_Central: { radius: 0.011, points: [[.018,.72,.015],[.018,.91,.015],[.018,1.10,.01],[.018,1.23,.015],[.018,1.30,.02]] },
+  Carotid_L: { radius: 0.0065, points: [[-.025,1.36,.025],[-.028,1.42,.025],[-.031,1.50,.02],[-.035,1.62,.015]] },
+  Carotid_R: { radius: 0.0065, points: [[.025,1.36,.025],[.028,1.42,.025],[.031,1.50,.02],[.035,1.62,.015]] },
+  Artery_Arm_L: { radius: 0.005, points: [[-.015,1.32,.025],[-.06,1.35,.02],[-.14,1.36,.015],[-.21,1.32,.01],[-.27,1.25,.005],[-.33,1.15,.005],[-.38,1.04,.005]] },
+  Vein_Arm_L: { radius: 0.0055, points: [[.018,1.30,.005],[-.065,1.34,.005],[-.15,1.35,0],[-.22,1.30,0],[-.29,1.23,0],[-.35,1.14,0],[-.39,1.04,0]] },
+  Artery_Arm_R: { radius: 0.005, points: [[-.015,1.32,.025],[.06,1.35,.02],[.14,1.36,.015],[.21,1.32,.01],[.27,1.25,.005],[.33,1.15,.005],[.38,1.04,.005]] },
+  Vein_Arm_R: { radius: 0.0055, points: [[.018,1.30,.005],[.065,1.34,.005],[.15,1.35,0],[.22,1.30,0],[.29,1.23,0],[.35,1.14,0],[.39,1.04,0]] },
+  Artery_Leg_L: { radius: 0.006, points: [[-.015,.72,.025],[-.03,.68,.025],[-.07,.64,.025],[-.105,.59,.025],[-.12,.51,.025],[-.13,.39,.025],[-.12,.28,.02]] },
+  Vein_Leg_L: { radius: 0.0065, points: [[.018,.72,.005],[-.03,.68,.005],[-.075,.63,.005],[-.11,.57,.005],[-.13,.49,.005],[-.14,.38,.005],[-.13,.28,.005]] },
+  Artery_Leg_R: { radius: 0.006, points: [[-.015,.72,.025],[.03,.68,.025],[.07,.64,.025],[.105,.59,.025],[.12,.51,.025],[.13,.39,.025],[.12,.28,.02]] },
+  Vein_Leg_R: { radius: 0.0065, points: [[.018,.72,.005],[.03,.68,.005],[.075,.63,.005],[.11,.57,.005],[.13,.49,.005],[.14,.38,.005],[.13,.28,.005]] },
+};
+function refineVessel(object, name) {
+  const route = vesselRoutes[name];
+  if (!route) return;
+  let material;
+  const previousMeshes = [];
+  object.traverse((child) => { if (child.isMesh) { if (!material) material = child.material; previousMeshes.push(child); } });
+  if (!material) return;
+  const points = route.points.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
+  const geometry = new THREE.TubeGeometry(curve, 42, route.radius, 10, false);
+  geometry.computeVertexNormals();
+  if (object.isMesh) {
+    object.geometry.dispose();
+    object.geometry = geometry;
+    object.material = material;
+  } else {
+    for (const mesh of previousMeshes) mesh.geometry.dispose();
+    object.clear();
+    object.add(new THREE.Mesh(geometry, material));
+  }
+  object.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+}
 function loadNamedAnatomy() {
   return new Promise((resolve, reject) => {
     const materialLoader = new MTLLoader();
     materialLoader.setPath('/assets/anatomy/');
     materialLoader.load('mediview_anatomy.mtl', (materials) => {
       materials.preload();
+      const tissuePalette = {
+        Mat_Artery: 0xa7474e,
+        Mat_Vein: 0x5578b4,
+        Mat_Heart: 0xb94f5c,
+        Mat_Lungs: 0xa17c83,
+        Mat_Liver: 0x956047,
+        Mat_Stomach: 0xb88964,
+        Mat_Kidneys: 0x985b59,
+      };
+      for (const [name, material] of Object.entries(materials.materials)) {
+        if (tissuePalette[name]) material.color.set(tissuePalette[name]);
+        if (material.isMeshPhongMaterial) {
+          material.shininess = 18;
+          material.specular.set(0x292e35);
+          material.needsUpdate = true;
+        }
+      }
       const loader = new OBJLoader();
       loader.setMaterials(materials);
       loader.load('/assets/anatomy/mediview_anatomy.obj', (root) => {
         for (const object of root.children) {
           if (!includedObjStructures.test(object.name)) continue;
           const meta = metadataFor(object.name);
-          if (meta) recordFromObject(object.name, object, meta.category);
+          if (!meta) continue;
+          refineVessel(object, object.name);
+          object.scale.x *= -1;
+          recordFromObject(object.name, object, meta.category);
         }
         buildSystemControls();
         buildStructureBrowser();
         updateStructureCount();
+        buildAnatomyLabels();
         resolve();
       }, undefined, reject);
     }, undefined, reject);
@@ -418,6 +486,40 @@ function updateAnnotation() {
   annotation.style.top = `${y - 12}px`;
   annotation.hidden = false;
 }
+function buildAnatomyLabels() {
+  const container = $('#anatomy-labels');
+  container.replaceChildren();
+  anatomyLabelNodes.clear();
+  for (const [key, definition] of Object.entries(anatomyLabelDefinitions)) {
+    if (!structures.has(key)) continue;
+    const label = document.createElement('button');
+    label.className = 'anatomy-label';
+    label.type = 'button';
+    label.dataset.align = definition.align;
+    label.textContent = definition.text;
+    label.addEventListener('click', () => selectStructure(structures.get(key), { focus: false }));
+    container.append(label);
+    anatomyLabelNodes.set(key, label);
+  }
+  updateAnatomyLabels();
+}
+function updateAnatomyLabels() {
+  const container = $('#anatomy-labels');
+  container.hidden = !labelsEnabled;
+  if (!labelsEnabled) return;
+  for (const [key, label] of anatomyLabelNodes) {
+    const record = structures.get(key);
+    if (!record || record === selectedRecord || !isAnatomyVisible(record.root)) { label.hidden = true; continue; }
+    const point = record.bounds.getCenter(new THREE.Vector3()).project(camera);
+    if (point.z < -1 || point.z > 1) { label.hidden = true; continue; }
+    const definition = anatomyLabelDefinitions[key];
+    const x = (point.x * 0.5 + 0.5) * window.innerWidth + definition.x;
+    const y = (-point.y * 0.5 + 0.5) * window.innerHeight + definition.y;
+    label.style.left = `${x}px`;
+    label.style.top = `${y}px`;
+    label.hidden = false;
+  }
+}
 function showToast(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('visible');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('visible'), 2100);
@@ -494,7 +596,7 @@ function setView(name) {
 document.querySelectorAll('.view-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
 $('#reset-camera').addEventListener('click', () => { const scan = structures.get('Human skeleton'); if (scan) fitCameraToModel(scan.root); setView('front'); });
 $('#labels').addEventListener('click', () => {
-  labelsEnabled = !labelsEnabled; $('#labels').classList.toggle('selected', labelsEnabled); updateAnnotation();
+  labelsEnabled = !labelsEnabled; $('#labels').classList.toggle('selected', labelsEnabled); updateAnnotation(); updateAnatomyLabels();
 });
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -596,6 +698,7 @@ setLoadText('Loading high detail scan mesh…');
 Promise.all([loadSkeleton(), loadNamedAnatomy()]).then(() => {
   setLoadText(`${structures.size} structures · Artec Group scan · CC BY 3.0`);
   updateStructureCount(); buildSystemControls(); buildStructureBrowser();
+  buildAnatomyLabels();
   $('#restore-view').disabled = !localStorage.getItem('mediview-anatomy-view');
 }).catch((error) => {
   console.error('Anatomy model load failed', error);
@@ -607,5 +710,6 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
   updateAnnotation();
+  updateAnatomyLabels();
 }
 animate();
