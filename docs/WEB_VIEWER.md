@@ -19,6 +19,14 @@ invent missing muscles, nerves, reproductive organs, or other structures.
 Descriptions are concise educational summaries and the supplied anatomy meshes
 are schematic, not clinical segmentations.
 
+The companion OBJ export placed its `L` objects on negative X, opposite the
+project's patient-left convention. The browser reflects these named anatomy
+meshes so left and right labels match the patient, while leaving the scan
+skeleton unchanged. It also uses narrower, smooth tube paths for the supplied
+artery and vein routes so they read as connected branches alongside the bones.
+The included vessel data remains simplified and is not a complete vascular
+segmentation.
+
 ## Controls
 
 - Drag with the left mouse button to orbit; right drag or Shift + left drag to
@@ -30,7 +38,9 @@ are schematic, not clinical segmentations.
   click a system chip to isolate that system.
 - Use the opacity slider or **Isolate structure** in the information panel.
 - **Measure** records the distance between two clicked points in centimetres.
-- **Labels** toggles the selected structure label. **Guided tour** visits
+- Major organs have front-view labels; selecting one replaces its label with a
+  selected-structure callout. **Labels** toggles these annotations.
+  **Guided tour** visits
   supplied structures. **Capture** downloads a PNG screenshot.
 - **Save view** stores camera and visibility settings in the current browser;
   **Load view** restores them on that device.
