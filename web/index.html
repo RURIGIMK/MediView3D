@@ -26,6 +26,10 @@
       <label class="search-box"><span aria-hidden="true">⌕</span><input id="structure-search" type="search" placeholder="Search anatomy" autocomplete="off" aria-label="Search anatomical structures" /><kbd>/</kbd></label>
       <div class="system-title"><span>ANATOMY LAYERS</span><button id="reset-layers" class="text-button">Reset</button></div>
       <div id="layer-list" class="layer-list" aria-label="Anatomy layer visibility"></div>
+      <div id="muscle-opacity-control" class="layer-opacity" hidden>
+        <label class="opacity-label" for="muscle-opacity-slider"><span>Muscle layer opacity</span><output id="muscle-opacity-value">100%</output></label>
+        <input id="muscle-opacity-slider" class="range" type="range" min="15" max="100" value="100" />
+      </div>
       <details class="system-details">
         <summary><span>ANATOMICAL SYSTEMS</span><span class="system-details-hint">Advanced</span></summary>
         <div id="system-list" class="system-list" aria-label="Anatomical system visibility"></div>

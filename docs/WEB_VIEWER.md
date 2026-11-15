@@ -18,8 +18,14 @@ organs and vessel paths. The desktop C++ application remains separate.
 Only systems represented in the supplied assets are listed. The joined scan
 does not contain independently selectable bone objects. Small-intestine data
 includes the duodenum and jejunum; the source set does not include an ileum
-mesh. Muscle and nerve layers remain unavailable until their own assets are
-added. These models are educational adaptations, not clinical segmentations.
+mesh. The muscle layer has 28 selectable left/right groups and loads on first
+use; the nerve layer remains unavailable until its model is added. These models
+are educational adaptations, not clinical segmentations.
+
+`assets/anatomy/muscles.glb` contains named neck, pectoral, deltoid, arm,
+forearm, abdominal, back, gluteal, thigh, and calf groups. The layer is off by
+default and includes an independent layer-opacity control; each group also
+supports individual visibility, selection, details, and opacity.
 
 Organs in `assets/anatomy/organs.glb` are adapted from Z-Anatomy CC BY-SA 4.0
 meshes and exported as named Draco-compressed structures. Their left/right
@@ -75,7 +81,7 @@ and model requests require HTTP.
 
 ## Regenerate organ assets
 
-The exporter requires these upstream files under `evidence/z-anatomy/`:
+The organ exporter requires these upstream files under `evidence/z-anatomy/`:
 
 - `VisceralSystem100.fbx`
 - `CardioVascular41.fbx`
@@ -94,11 +100,27 @@ organ is at or below 60,000 triangles. The GLB is Draco-compressed. Its
 Z-Anatomy-derived content is licensed CC BY-SA 4.0; see
 [`ATTRIBUTION.md`](ATTRIBUTION.md).
 
+## Regenerate muscle assets
+
+The muscle exporter additionally requires `MuscularSystem100.fbx` from the
+same upstream directory in `evidence/z-anatomy/`. It groups the major source
+muscles into 28 selectable left/right structures and writes
+`assets/anatomy/muscles.glb`:
+
+```bash
+blender --background --python scripts/export_z_anatomy_muscles.py
+```
+
+The exporter enforces a 400,000-triangle total budget and Draco-compresses the
+GLB. The browser only requests this asset when the muscle layer is first shown.
+The source FBX is ignored by Git; licensing and attribution are in
+[`ATTRIBUTION.md`](ATTRIBUTION.md).
+
 ## Deploy
 
 The Render Blueprint and Vercel configuration copy the anatomy files into the
-web publish directory during deployment. The organ exporter replaces the
-existing `organs.glb`, so no deployment copy-command changes are needed.
+web publish directory during deployment, including the lazy-loaded
+`muscles.glb`.
 Connect either service to the desired Git branch; pushes to that branch trigger
 updates. The viewer loads Three.js,
 the Draco decoder, and fonts from public CDNs, so browsers need network access

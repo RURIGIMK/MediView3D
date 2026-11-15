@@ -77,10 +77,11 @@ skeleton GLB, named organ meshes from `assets/anatomy/organs.glb`, and uses
 companion OBJ landmarks plus the scan geometry to generate tapered, branched
 arterial and venous paths at runtime. Its heart, lobed lungs, digestive organs,
 kidneys, adrenal glands, spleen, trachea, and bronchi use adapted Z-Anatomy
-meshes. The viewer registers the named reference bones to scan surface
-landmarks, then places organs inside measured rib-cage, spinal, and pelvic
-regions. The Z-Anatomy-derived small-intestine asset includes the duodenum and
-jejunum; an ileum mesh is not included.
+meshes. Its 28-group Z-Anatomy muscle layer is off by default and lazy-loads
+from `assets/anatomy/muscles.glb`. The viewer registers the named reference
+bones to scan surface landmarks, then places organs inside measured rib-cage,
+spinal, and pelvic regions. The Z-Anatomy-derived small-intestine asset
+includes the duodenum and jejunum; an ileum mesh is not included.
 
 The browser structure list, system visibility, search, selection details,
 per-structure opacity, isolation, labels, camera presets, pan/rotate/zoom,
@@ -95,7 +96,10 @@ source URLs, filenames, and CC BY-SA 4.0 attribution are documented in
 [`docs/ATTRIBUTION.md`](docs/ATTRIBUTION.md). Each exported organ is capped at
 60,000 triangles and the asset is Draco-compressed. The supplied Blender scan
 is a single joined object, so individual bones cannot be selected separately.
-Muscle and nerve layers remain unavailable until their source assets are added.
+Regenerate `assets/anatomy/muscles.glb` with
+`blender --background --python scripts/export_z_anatomy_muscles.py`; it reads
+the ignored `MuscularSystem100.fbx` and caps the grouped asset at 400,000
+triangles. The nervous layer is not yet available.
 
 To host it on Render, create a Blueprint from this repository and select the
 `kyle-3d-skeleton-render` branch. The root [`render.yaml`](render.yaml)
@@ -200,7 +204,7 @@ The current work is a prototype rather than a complete anatomy platform. We stil
 
 - The desktop anatomy remains a schematic visualization. The browser viewer uses the supplied scan and organ meshes plus generated landmark-based vessel paths; these are educational assets rather than clinically validated models.
 - The browser supports selecting supplied structures and viewing concise educational descriptions. The joined skeleton scan does not provide individually selectable bones.
-- Muscle, nervous, reproductive and other systems without supplied meshes are not included. The project does not yet include animation sequences or a 3D cross-section workflow.
+- Nervous, reproductive and other systems without supplied meshes are not included. The project does not yet include animation sequences or a 3D cross-section workflow.
 - The desktop renderer uses the OpenGL compatibility profile and immediate-mode drawing; a modern shader-based desktop rendering pipeline remains future work.
 - The scanline fill algorithm is intended for simple polygons and does not handle holes or self-intersecting polygons.
 - GUI support and OpenGL drivers vary by operating system. The desktop window requires a working graphical display.

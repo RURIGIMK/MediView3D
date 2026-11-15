@@ -3,7 +3,7 @@ services:
     name: mediview3d-web
     runtime: static
     branch: kyle-3d-skeleton-render
-    buildCommand: mkdir -p web/assets/anatomy && cp assets/anatomy/skeleton_scan.glb assets/anatomy/organs.glb assets/anatomy/mediview_anatomy.obj assets/anatomy/mediview_anatomy.mtl web/assets/anatomy/
+    buildCommand: mkdir -p web/assets/anatomy && cp assets/anatomy/skeleton_scan.glb assets/anatomy/organs.glb assets/anatomy/muscles.glb assets/anatomy/mediview_anatomy.obj assets/anatomy/mediview_anatomy.mtl web/assets/anatomy/
     staticPublishPath: ./web
     headers:
       - path: /assets/anatomy/*

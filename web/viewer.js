@@ -8,6 +8,7 @@ import { createBoneMaterial, fitCameraToSkeleton } from './skeleton.js';
 import { buildVesselStructures, vesselStructureNames } from './vessels.js';
 import { organStructureNames, placeOrganStructures } from './organs.js';
 import { registerReferenceToScan } from './registration.js';
+import { loadMuscleStructures, muscleStructureNames } from './muscles.js';
 
 const $ = (selector) => document.querySelector(selector);
 const canvas = $('#viewer');
@@ -69,7 +70,7 @@ const layerDefinitions = [
   { id: 'skeleton', label: 'Skeleton', color: '#cbd5df', visible: true, matches: (record) => record.name === 'Human skeleton' },
   { id: 'organs', label: 'Organs', color: '#cf7a82', visible: true, matches: (record) => organStructureNames.has(record.name) },
   { id: 'vessels', label: 'Vessels', color: '#e96773', visible: true, matches: (record) => vesselStructureNames.has(record.name) },
-  { id: 'muscles', label: 'Muscles', color: '#7d8b98', available: false },
+  { id: 'muscles', label: 'Muscles', color: '#a65b50', visible: false, loaded: false, loading: false, opacity: 1, matches: (record) => muscleStructureNames.has(record.name) },
   { id: 'nerves', label: 'Nerves', color: '#7d8b98', available: false },
 ];
 const anatomyLabelNodes = new Map();
@@ -83,6 +84,7 @@ const categoryDefinitions = [
   { id: 'urinary', label: 'Urinary', color: '#bd78be' },
   { id: 'endocrine', label: 'Endocrine', color: '#d3a56e' },
   { id: 'lymphatic', label: 'Lymphatic', color: '#b67e9a' },
+  { id: 'muscular', label: 'Muscular', color: '#a65b50' },
 ];
 const categoryById = Object.fromEntries(categoryDefinitions.map((category) => [category.id, category]));
 const structureMeta = {
@@ -118,6 +120,33 @@ const structureMeta = {
   Artery_Leg_R: { category: 'cardiovascular', location: 'Right lower limb.', function: 'Represents an arterial pathway supplying the right lower limb.', description: 'A simplified, tapered leg artery path generated from the skeleton landmarks.' },
   Vein_Leg_R: { category: 'cardiovascular', location: 'Right lower limb.', function: 'Represents a venous pathway returning blood from the right lower limb.', description: 'A simplified, tapered leg vein path returning toward the vena cava.' },
 };
+const muscleGroupInfo = {
+  Neck: ['neck', 'Moves and stabilizes the head and cervical spine.'],
+  Pectorals: ['chest', 'Moves the upper arm and supports shoulder motion.'],
+  Deltoids: ['shoulder', 'Raises and rotates the upper arm.'],
+  Biceps: ['anterior upper arm', 'Flexes the elbow and assists forearm supination.'],
+  Triceps: ['posterior upper arm', 'Extends the elbow and supports shoulder motion.'],
+  Forearm: ['forearm', 'Moves the wrist and fingers.'],
+  Abdominals: ['anterior abdominal wall', 'Supports trunk flexion and abdominal wall stability.'],
+  Obliques: ['lateral abdominal wall', 'Rotates and laterally flexes the trunk.'],
+  Trapezius: ['upper back and neck', 'Moves and stabilizes the scapula and neck.'],
+  Latissimus: ['back', 'Extends, adducts, and internally rotates the upper arm.'],
+  Glutes: ['hip', 'Extends and stabilizes the hip.'],
+  Quadriceps: ['anterior thigh', 'Extends the knee and supports hip flexion.'],
+  Hamstrings: ['posterior thigh', 'Flexes the knee and extends the hip.'],
+  Calves: ['posterior lower leg', 'Plantar-flexes the ankle and supports gait.'],
+};
+for (const name of muscleStructureNames) {
+  const [group, sideCode] = name.split('_');
+  const [region, functionDescription] = muscleGroupInfo[group];
+  const side = sideCode === 'L' ? 'left' : 'right';
+  structureMeta[name] = {
+    category: 'muscular',
+    location: `${side[0].toUpperCase()}${side.slice(1)} ${region}.`,
+    function: functionDescription,
+    description: `Joined ${side} ${group.toLowerCase()} meshes adapted from the Z-Anatomy muscular system.`,
+  };
+}
 const displayNames = {
   'Human skeleton': 'Full skeleton scan', Lung_L: 'Left lung', Lung_R: 'Right lung',
   Kidney_L: 'Left kidney', Kidney_R: 'Right kidney', Aorta_Central: 'Aorta',
@@ -130,6 +159,17 @@ const displayNames = {
   Artery_Leg_L: 'Left leg artery', Artery_Leg_R: 'Right leg artery',
   Vein_Leg_L: 'Left leg vein', Vein_Leg_R: 'Right leg vein',
 };
+const muscleDisplayGroups = {
+  Neck: 'neck muscles', Pectorals: 'pectorals', Deltoids: 'deltoids',
+  Biceps: 'biceps', Triceps: 'triceps', Forearm: 'forearm muscles',
+  Abdominals: 'abdominal muscles', Obliques: 'obliques', Trapezius: 'trapezius',
+  Latissimus: 'latissimus', Glutes: 'gluteal muscles', Quadriceps: 'quadriceps',
+  Hamstrings: 'hamstrings', Calves: 'calf muscles',
+};
+for (const name of muscleStructureNames) {
+  const [group, side] = name.split('_');
+  displayNames[name] = `${side === 'L' ? 'Left' : 'Right'} ${muscleDisplayGroups[group]}`;
+}
 const systems = new Map(categoryDefinitions.map((category) => [category.id, { ...category, visible: true, group: new THREE.Group(), structures: [] }]));
 for (const system of systems.values()) {
   system.group.name = system.label;
@@ -137,6 +177,10 @@ for (const system of systems.values()) {
 }
 
 const structures = new Map();
+const muscleLayer = layerDefinitions.find((layer) => layer.id === 'muscles');
+let anatomyReady = false;
+let muscleLoadPromise = null;
+let currentRegistration = null;
 let selectedRecord = null;
 let hoveredRecord = null;
 let cameraFraming = 'torso';
@@ -178,7 +222,7 @@ function recordFromObject(name, object, category, root = object) {
   const metadata = metadataFor(name);
   const system = systems.get(category || metadata.category);
   if (!system) return null;
-  const record = { key: name, name, displayName: friendlyName(name), system, root, meshes: [], visible: true, initialMaterials: new Map(), bounds: new THREE.Box3() };
+  const record = { key: name, name, displayName: friendlyName(name), system, root, meshes: [], visible: true, opacity: 1, initialMaterials: new Map(), opacityMaterials: new Map(), bounds: new THREE.Box3() };
   root.userData.structureKey = name;
   root.traverse((child) => {
     if (!child.isMesh) return;
@@ -289,9 +333,37 @@ function loadNamedAnatomy() {
       buildStructureBrowser();
       updateStructureCount();
       buildAnatomyLabels();
+      currentRegistration = registration;
+      anatomyReady = true;
       resolve(registration);
     }).catch(reject);
   });
+}
+
+function loadMuscleLayer() {
+  if (muscleLoadPromise) return muscleLoadPromise;
+  muscleLoadPromise = loadMuscleStructures().then((roots) => {
+    for (const root of roots) recordFromObject(root.name, root, 'muscular');
+    muscleLayer.loaded = true;
+    muscleLayer.loading = false;
+    $('#muscle-opacity-control').hidden = false;
+    buildSystemControls();
+    buildStructureBrowser();
+    updateStructureCount();
+    applyVisibility();
+    const rms = currentRegistration ? Math.round(currentRegistration.rmsError * 1000) : 0;
+    setLoadText(`${structures.size} structures · muscles loaded · landmark fit RMS ${rms} mm · Artec scan CC BY 3.0`);
+    return roots;
+  }).catch((error) => {
+    muscleLoadPromise = null;
+    muscleLayer.loading = false;
+    muscleLayer.visible = false;
+    buildLayerControls();
+    console.error('Muscle model load failed', error);
+    setLoadText(`Muscle layer could not be loaded: ${error.message || 'check the asset and refresh.'}`, true);
+    throw error;
+  });
+  return muscleLoadPromise;
 }
 
 function updateStructureCount() {
@@ -322,10 +394,23 @@ function buildLayerControls() {
       button.title = `${layer.label} models are coming soon`;
       button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>Coming soon</small></span>`;
     } else {
+      const waitingForAnatomy = layer.id === 'muscles' && !anatomyReady;
+      const waitingForModel = layer.loading || waitingForAnatomy;
+      button.disabled = waitingForModel;
       button.setAttribute('aria-pressed', String(layer.visible));
-      button.title = `${layer.visible ? 'Hide' : 'Show'} ${layer.label}`;
-      button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>${layer.visible ? 'Shown' : 'Hidden'}</small></span>`;
+      button.setAttribute('aria-busy', String(layer.loading));
+      button.title = waitingForAnatomy ? 'Preparing the anatomy reference' : `${layer.visible ? 'Hide' : 'Show'} ${layer.label}`;
+      const status = layer.loading ? 'Loading…' : waitingForAnatomy ? 'Preparing…' : layer.visible ? 'Shown' : 'Hidden';
+      button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>${status}</small></span>`;
       button.addEventListener('click', () => {
+        if (layer.id === 'muscles' && !layer.loaded) {
+          layer.visible = true;
+          layer.loading = true;
+          setLoadText('Loading the muscle layer…');
+          buildLayerControls();
+          loadMuscleLayer().catch(() => {});
+          return;
+        }
         layer.visible = !layer.visible;
         applyVisibility();
         buildLayerControls();
@@ -420,7 +505,9 @@ function updateStructureInfo(record) {
   $('#info-location').textContent = metadata.location;
   $('#info-function').textContent = metadata.function;
   $('#info-description').textContent = metadata.description;
-  $('#opacity-slider').value = '100'; $('#opacity-value').textContent = '100%';
+  const opacityPercent = Math.round(record.opacity * 100);
+  $('#opacity-slider').value = String(opacityPercent);
+  $('#opacity-value').textContent = `${opacityPercent}%`;
   buildStructureBrowser();
   updateAnnotation();
 }
@@ -443,20 +530,50 @@ function selectStructure(record, { focus = true } = {}) {
   if (focus) focusRecord(record);
 }
 function setHighlight(record, enabled) {
-  for (const mesh of record.meshes) {
-    if (enabled) {
-      const originals = Array.isArray(record.initialMaterials.get(mesh)) ? record.initialMaterials.get(mesh) : [record.initialMaterials.get(mesh)];
-      const highlighted = originals.map((material) => {
+  if (enabled) {
+    for (const mesh of record.meshes) {
+      const current = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      const highlighted = current.map((material) => {
         const copy = material.clone();
         if ('emissive' in copy) { copy.emissive.set(0x16a987); copy.emissiveIntensity = 0.32; }
         return copy;
       });
       mesh.material = Array.isArray(mesh.material) ? highlighted : highlighted[0];
-    } else {
-      const current = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      current.forEach((material) => material?.dispose?.());
-      mesh.material = record.initialMaterials.get(mesh);
     }
+    return;
+  }
+  for (const mesh of record.meshes) {
+    const source = record.initialMaterials.get(mesh);
+    const opacityCopies = record.opacityMaterials.get(mesh) ?? [];
+    const current = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    current.forEach((material) => {
+      if (material !== source && !opacityCopies.includes(material)) material?.dispose?.();
+    });
+  }
+  applyRecordOpacity(record);
+}
+function applyRecordOpacity(record) {
+  const layerOpacity = muscleStructureNames.has(record.name) ? muscleLayer.opacity : 1;
+  const opacity = record.opacity * layerOpacity;
+  for (const mesh of record.meshes) {
+    const source = record.initialMaterials.get(mesh);
+    if (opacity >= 0.999) {
+      mesh.material = source;
+      continue;
+    }
+    let copies = record.opacityMaterials.get(mesh);
+    if (!copies) {
+      const materials = Array.isArray(source) ? source : [source];
+      copies = materials.map((material) => material.clone());
+      record.opacityMaterials.set(mesh, copies);
+    }
+    const materials = Array.isArray(source) ? source : [source];
+    copies.forEach((copy, index) => {
+      copy.opacity = (materials[index].opacity ?? 1) * opacity;
+      copy.transparent = opacity < 1 || materials[index].transparent;
+      copy.depthWrite = opacity > 0.98 ? materials[index].depthWrite : false;
+    });
+    mesh.material = Array.isArray(source) ? copies : copies[0];
   }
 }
 function clearHighlight() { if (selectedRecord) setHighlight(selectedRecord, false); }
@@ -644,21 +761,36 @@ $('#reset-layers').addEventListener('click', () => {
   for (const layer of layerDefinitions) if (layer.available !== false) layer.visible = true;
   if (isolatedKey) { isolatedKey = null; applyIsolation(); }
   applyVisibility(); buildSystemControls(); buildStructureBrowser();
+  if (!muscleLayer.loaded && anatomyReady) {
+    muscleLayer.loading = true;
+    setLoadText('Loading the muscle layer…');
+    buildLayerControls();
+    loadMuscleLayer().catch(() => {});
+  }
   $('#isolate-state').hidden = true; showToast('All available anatomy layers are visible');
 });
 $('#isolate').addEventListener('click', () => { if (!selectedRecord) return; setIsolation(selectedRecord.key); });
 $('#show-all').addEventListener('click', () => { isolatedKey = null; applyIsolation(); });
 $('#opacity-slider').addEventListener('input', (event) => {
   if (!selectedRecord) return;
+  const record = selectedRecord;
   const opacity = Number(event.target.value) / 100;
   $('#opacity-value').textContent = `${event.target.value}%`;
-  for (const mesh of selectedRecord.meshes) {
-    const source = selectedRecord.initialMaterials.get(mesh);
-    const materials = Array.isArray(source) ? source : [source];
-    const copies = materials.map((material) => {
-      const copy = material.clone(); copy.transparent = opacity < 1 || material.transparent; copy.opacity = opacity; copy.depthWrite = opacity > 0.98; return copy;
-    });
-    mesh.material = Array.isArray(source) ? copies : copies[0];
+  setHighlight(record, false);
+  record.opacity = opacity;
+  applyRecordOpacity(record);
+  setHighlight(record, true);
+});
+$('#muscle-opacity-slider').addEventListener('input', (event) => {
+  const opacity = Number(event.target.value) / 100;
+  muscleLayer.opacity = opacity;
+  $('#muscle-opacity-value').textContent = `${event.target.value}%`;
+  for (const record of structures.values()) {
+    if (!muscleStructureNames.has(record.name)) continue;
+    const highlighted = record === selectedRecord;
+    if (highlighted) setHighlight(record, false);
+    applyRecordOpacity(record);
+    if (highlighted) setHighlight(record, true);
   }
 });
 
@@ -780,7 +912,14 @@ function restoreView() {
       if (layer) layer.visible = visible;
     }
     for (const [key, visible] of Object.entries(state.structures || {})) if (structures.has(key)) structures.get(key).visible = visible;
-    controls.update(); buildSystemControls(); applyVisibility(); buildStructureBrowser(); showToast('Saved view restored');
+    controls.update(); buildSystemControls(); applyVisibility(); buildStructureBrowser();
+    if (muscleLayer.visible && !muscleLayer.loaded && anatomyReady) {
+      muscleLayer.loading = true;
+      setLoadText('Loading the saved muscle layer…');
+      buildLayerControls();
+      loadMuscleLayer().catch(() => {});
+    }
+    showToast('Saved view restored');
   } catch { showToast('Saved view could not be restored'); }
 }
 $('#restore-view').addEventListener('click', restoreView);
@@ -788,11 +927,22 @@ $('#restore-view').addEventListener('click', restoreView);
 const guidedKeys = [
   'Heart', 'Lung_L', 'Trachea', 'Liver', 'Stomach', 'Pancreas',
   'Small_Intestine', 'Large_Intestine', 'Spleen', 'Kidney_L', 'Bladder',
+  ...muscleStructureNames,
   'VenaCava_Central', 'Human skeleton',
 ];
 const tourCard = $('#tour-card');
 function showTourStop() {
   const key = guidedKeys[tourIndex]; const record = structures.get(key);
+  if (!record && muscleStructureNames.has(key) && anatomyReady) {
+    muscleLayer.visible = true;
+    muscleLayer.loading = true;
+    buildLayerControls();
+    $('#tour-title').textContent = 'Muscle layer';
+    $('#tour-progress').textContent = 'Loading structures for the guided tour…';
+    tourCard.hidden = false;
+    loadMuscleLayer().then(showTourStop).catch(() => {});
+    return;
+  }
   if (!record) { if (tourIndex < guidedKeys.length - 1) { tourIndex++; showTourStop(); } else finishTour(); return; }
   selectStructure(record);
   $('#tour-title').textContent = record.displayName;
