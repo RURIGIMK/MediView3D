@@ -6,6 +6,8 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { setupLighting } from './lighting.js';
 import { createBoneMaterial, fitCameraToSkeleton } from './skeleton.js';
 import { buildVesselStructures, vesselStructureNames } from './vessels.js';
+import { organStructureNames, placeOrganStructures } from './organs.js';
+import { registerReferenceToScan } from './registration.js';
 
 const $ = (selector) => document.querySelector(selector);
 const canvas = $('#viewer');
@@ -55,8 +57,14 @@ const anatomyLabelDefinitions = {
   Kidney_R: { text: 'RIGHT KIDNEY', x: -56, y: 0, align: 'right' },
   Kidney_L: { text: 'LEFT KIDNEY', x: 56, y: 0, align: 'left' },
   Bladder: { text: 'BLADDER', x: 0, y: 25, align: 'center' },
+  Trachea: { text: 'TRACHEA', x: 0, y: -21, align: 'center' },
+  Gallbladder: { text: 'GALLBLADDER', x: -58, y: 10, align: 'right' },
+  Pancreas: { text: 'PANCREAS', x: 58, y: 9, align: 'left' },
+  Spleen: { text: 'SPLEEN', x: -58, y: 17, align: 'right' },
+  Small_Intestine: { text: 'SMALL INTESTINE', x: 58, y: -14, align: 'left' },
+  Large_Intestine: { text: 'LARGE INTESTINE', x: -58, y: -21, align: 'right' },
+  Esophagus: { text: 'ESOPHAGUS', x: 58, y: 17, align: 'left' },
 };
-const organStructureNames = new Set(['Heart', 'Lung_L', 'Lung_R', 'Liver', 'Stomach', 'Kidney_L', 'Kidney_R', 'Bladder']);
 const layerDefinitions = [
   { id: 'skeleton', label: 'Skeleton', color: '#cbd5df', visible: true, matches: (record) => record.name === 'Human skeleton' },
   { id: 'organs', label: 'Organs', color: '#cf7a82', visible: true, matches: (record) => organStructureNames.has(record.name) },
@@ -73,18 +81,30 @@ const categoryDefinitions = [
   { id: 'respiratory', label: 'Respiratory', color: '#cf7a82' },
   { id: 'digestive', label: 'Digestive', color: '#dc9454' },
   { id: 'urinary', label: 'Urinary', color: '#bd78be' },
+  { id: 'endocrine', label: 'Endocrine', color: '#d3a56e' },
+  { id: 'lymphatic', label: 'Lymphatic', color: '#b67e9a' },
 ];
 const categoryById = Object.fromEntries(categoryDefinitions.map((category) => [category.id, category]));
 const structureMeta = {
   'Human skeleton': { category: 'skeleton', location: 'Full body; axial and appendicular skeleton.', function: 'Supports the body, protects internal organs, and provides attachment points for movement.', description: 'This scan based mesh is the supplied Blender scene exported for browser rendering. The source scene contains one joined skeleton mesh, so individual bones are not separately selectable in this scan.' },
-  Heart: { category: 'cardiovascular', location: 'Thoracic cavity, between the lungs.', function: 'Moves blood through the pulmonary and systemic circulations.', description: 'The supplied model includes a single heart mesh. The model is an educational visualization and is not a patient specific segmentation.' },
-  Lung_L: { category: 'respiratory', location: 'Left side of the thoracic cavity.', function: 'Exchanges oxygen and carbon dioxide between air and blood.', description: 'This is the left lung structure present in the supplied model.' },
-  Lung_R: { category: 'respiratory', location: 'Right side of the thoracic cavity.', function: 'Exchanges oxygen and carbon dioxide between air and blood.', description: 'This is the right lung structure present in the supplied model.' },
-  Liver: { category: 'digestive', location: 'Upper abdomen, predominantly on the right.', function: 'Processes absorbed nutrients and produces bile, among other metabolic roles.', description: 'The supplied model includes one liver mesh. Its shape is an anatomical visualization, not a clinical segmentation.' },
-  Stomach: { category: 'digestive', location: 'Upper abdomen, below the diaphragm.', function: 'Stores food and begins mechanical and chemical digestion.', description: 'This is the stomach structure present in the supplied model.' },
-  Kidney_L: { category: 'urinary', location: 'Posterior upper abdomen on the left.', function: 'Filters blood and contributes to fluid, electrolyte, and acid-base regulation.', description: 'This is the left kidney structure present in the supplied model.' },
-  Kidney_R: { category: 'urinary', location: 'Posterior upper abdomen on the right.', function: 'Filters blood and contributes to fluid, electrolyte, and acid-base regulation.', description: 'This is the right kidney structure present in the supplied model.' },
-  Bladder: { category: 'urinary', location: 'Pelvis, behind the pubic symphysis.', function: 'Stores urine before it is released from the body.', description: 'This is the bladder structure present in the supplied model.' },
+  Heart: { category: 'cardiovascular', location: 'Thoracic cavity, between the lungs and slightly left of midline.', function: 'Moves blood through the pulmonary and systemic circulations.', description: 'Joined right and left atrial and ventricular meshes from the Z-Anatomy model set.' },
+  Lung_L: { category: 'respiratory', location: 'Left side of the thoracic cavity.', function: 'Exchanges oxygen and carbon dioxide between air and blood.', description: 'The left lung includes separate superior and inferior lobes with the cardiac notch represented in its source geometry.' },
+  Lung_R: { category: 'respiratory', location: 'Right side of the thoracic cavity.', function: 'Exchanges oxygen and carbon dioxide between air and blood.', description: 'The right lung includes separate superior, middle, and inferior lobes.' },
+  Liver: { category: 'digestive', location: 'Upper abdomen, predominantly on the right beneath the diaphragm.', function: 'Processes absorbed nutrients and produces bile, among other metabolic roles.', description: 'An adapted Z-Anatomy liver mesh positioned from the rib-cage and abdominal landmarks.' },
+  Gallbladder: { category: 'digestive', location: 'Undersurface of the liver on the right.', function: 'Stores and concentrates bile.', description: 'An adapted Z-Anatomy gallbladder mesh.' },
+  Stomach: { category: 'digestive', location: 'Upper abdomen on the left, below the diaphragm.', function: 'Stores food and begins mechanical and chemical digestion.', description: 'An adapted, curved Z-Anatomy stomach mesh.' },
+  Pancreas: { category: 'digestive', location: 'Upper abdomen, posterior to the stomach.', function: 'Produces digestive enzymes and hormones including insulin.', description: 'An adapted Z-Anatomy pancreas mesh.' },
+  Spleen: { category: 'lymphatic', location: 'Upper left abdomen, lateral to the stomach.', function: 'Filters blood and supports immune function.', description: 'An adapted Z-Anatomy spleen mesh.' },
+  Kidney_L: { category: 'urinary', location: 'Posterior upper abdomen on the left, beside the lower thoracic spine.', function: 'Filters blood and contributes to fluid, electrolyte, and acid-base regulation.', description: 'The left kidney mesh is positioned posteriorly using vertebral and pelvic landmarks.' },
+  Kidney_R: { category: 'urinary', location: 'Posterior upper abdomen on the right, beside the lower thoracic spine.', function: 'Filters blood and contributes to fluid, electrolyte, and acid-base regulation.', description: 'The right kidney mesh is positioned posteriorly using vertebral and pelvic landmarks.' },
+  Adrenal_L: { category: 'endocrine', location: 'Superior pole of the left kidney.', function: 'Produces hormones involved in stress response, metabolism, and blood pressure regulation.', description: 'The left suprarenal gland mesh from Z-Anatomy.' },
+  Adrenal_R: { category: 'endocrine', location: 'Superior pole of the right kidney.', function: 'Produces hormones involved in stress response, metabolism, and blood pressure regulation.', description: 'The right suprarenal gland mesh from Z-Anatomy.' },
+  Bladder: { category: 'urinary', location: 'Pelvis, behind the pubic symphysis.', function: 'Stores urine before it is released from the body.', description: 'An adapted Z-Anatomy bladder mesh positioned within the measured pelvic landmarks.' },
+  Small_Intestine: { category: 'digestive', location: 'Central abdomen, between the stomach and large intestine.', function: 'Completes digestion and absorbs most nutrients.', description: 'The available Z-Anatomy subset combines the duodenum and jejunum; an ileum mesh is not included in this source asset.' },
+  Large_Intestine: { category: 'digestive', location: 'Frames the small intestine through the abdomen.', function: 'Absorbs water and forms stool.', description: 'Joined ascending, transverse, descending, and sigmoid colon meshes.' },
+  Trachea: { category: 'respiratory', location: 'Midline neck and upper thorax, anterior to the esophagus.', function: 'Conducts air between the larynx and the bronchi.', description: 'An adapted Z-Anatomy trachea mesh.' },
+  Bronchi: { category: 'respiratory', location: 'Thorax, branching from the trachea toward both lungs.', function: 'Conducts air into the right and left lungs.', description: 'Joined main and lobar bronchus meshes from Z-Anatomy.' },
+  Esophagus: { category: 'digestive', location: 'Posterior to the trachea, extending through the thorax.', function: 'Moves swallowed food and liquid toward the stomach.', description: 'An adapted Z-Anatomy esophagus mesh.' },
   Aorta_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Carries oxygenated blood from the heart to the systemic circulation.', description: 'A landmark-driven educational path through the thorax and abdomen.' },
   VenaCava_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Returns systemic venous blood toward the heart.', description: 'A landmark-driven educational return path through the abdomen and thorax.' },
   Carotid_L: { category: 'cardiovascular', location: 'Left side of the neck.', function: 'Supplies arterial blood toward the head and neck.', description: 'A simplified carotid path generated from the skeleton landmarks.' },
@@ -101,6 +121,9 @@ const structureMeta = {
 const displayNames = {
   'Human skeleton': 'Full skeleton scan', Lung_L: 'Left lung', Lung_R: 'Right lung',
   Kidney_L: 'Left kidney', Kidney_R: 'Right kidney', Aorta_Central: 'Aorta',
+  Adrenal_L: 'Left adrenal gland', Adrenal_R: 'Right adrenal gland',
+  Small_Intestine: 'Small intestine', Large_Intestine: 'Large intestine',
+  Esophagus: 'Esophagus',
   VenaCava_Central: 'Vena cava', Carotid_L: 'Left carotid artery', Carotid_R: 'Right carotid artery',
   Artery_Arm_L: 'Left arm artery', Artery_Arm_R: 'Right arm artery',
   Vein_Arm_L: 'Left arm vein', Vein_Arm_R: 'Right arm vein',
@@ -218,36 +241,46 @@ function loadSkeleton() {
 function loadNamedAnatomy() {
   return new Promise((resolve, reject) => {
     const loader = new OBJLoader();
+    const organDraco = new DRACOLoader();
+    organDraco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+    const organLoader = new GLTFLoader();
+    organLoader.setDRACOLoader(organDraco);
     const loadObj = new Promise((loadResolve, loadReject) => {
       loader.load('/assets/anatomy/mediview_anatomy.obj', loadResolve, undefined, loadReject);
     });
     const loadOrgans = new Promise((loadResolve, loadReject) => {
-      new GLTFLoader().load('/assets/anatomy/organs.glb', loadResolve, undefined, loadReject);
+      organLoader.load(
+        '/assets/anatomy/organs.glb',
+        (gltf) => { organDraco.dispose(); loadResolve(gltf); },
+        undefined,
+        (error) => { organDraco.dispose(); loadReject(error); },
+      );
     });
     Promise.all([loadObj, loadOrgans]).then(([root, organs]) => {
       root.updateMatrixWorld(true);
-      const sourceBounds = new THREE.Box3().setFromObject(root);
-      const scanBounds = structures.get('Human skeleton')?.bounds;
-      if (!scanBounds || sourceBounds.isEmpty() || scanBounds.isEmpty()) {
-        throw new Error('Unable to register anatomy landmarks to the skeleton scan.');
-      }
-      const sourceSize = sourceBounds.getSize(new THREE.Vector3());
-      const scanSize = scanBounds.getSize(new THREE.Vector3());
-      const sourceCenter = sourceBounds.getCenter(new THREE.Vector3());
-      const scanCenter = scanBounds.getCenter(new THREE.Vector3());
-      const registrationScale = scanSize.y / sourceSize.y;
-      namedAnatomyRoot.scale.setScalar(registrationScale);
-      namedAnatomyRoot.position.copy(scanCenter).addScaledVector(sourceCenter, -registrationScale);
+      const scanRoot = structures.get('Human skeleton')?.root;
+      if (!scanRoot) throw new Error('The skeleton scan must load before its anatomy landmarks can be registered.');
+      const registration = registerReferenceToScan(root, scanRoot);
+      namedAnatomyRoot.matrixAutoUpdate = false;
+      namedAnatomyRoot.matrix.copy(registration.matrix);
+      anatomyRoot.updateMatrixWorld(true);
       namedAnatomyRoot.updateMatrixWorld(true);
+      placeOrganStructures(organs, root, registration);
+      const inverseRegistration = namedAnatomyRoot.matrixWorld.clone().invert();
       for (const object of [...organs.scene.children]) {
         if (!organStructureNames.has(object.name)) continue;
         const meta = metadataFor(object.name);
         if (!meta) continue;
-        recordFromObject(object.name, object, meta.category);
+        const registeredRoot = new THREE.Group();
+        registeredRoot.name = object.name;
+        registeredRoot.matrixAutoUpdate = false;
+        registeredRoot.matrix.copy(inverseRegistration);
+        registeredRoot.add(object);
+        recordFromObject(object.name, registeredRoot, meta.category, registeredRoot);
       }
       buildVesselStructures({
         sourceRoot: root,
-        skeletonRoot: structures.get('Human skeleton')?.root,
+        skeletonRoot: scanRoot,
         registrationRoot: namedAnatomyRoot,
         structures,
         register: (name, vesselRoot) => recordFromObject(name, vesselRoot, 'cardiovascular'),
@@ -256,7 +289,7 @@ function loadNamedAnatomy() {
       buildStructureBrowser();
       updateStructureCount();
       buildAnatomyLabels();
-      resolve();
+      resolve(registration);
     }).catch(reject);
   });
 }
@@ -752,7 +785,11 @@ function restoreView() {
 }
 $('#restore-view').addEventListener('click', restoreView);
 
-const guidedKeys = ['Heart','Lung_L','Liver','Kidney_L','Bladder','VenaCava_Central','Human skeleton'];
+const guidedKeys = [
+  'Heart', 'Lung_L', 'Trachea', 'Liver', 'Stomach', 'Pancreas',
+  'Small_Intestine', 'Large_Intestine', 'Spleen', 'Kidney_L', 'Bladder',
+  'VenaCava_Central', 'Human skeleton',
+];
 const tourCard = $('#tour-card');
 function showTourStop() {
   const key = guidedKeys[tourIndex]; const record = structures.get(key);
@@ -782,8 +819,8 @@ window.addEventListener('resize', () => {
 controls.addEventListener('change', updateAnnotation);
 
 setLoadText('Loading high detail scan mesh…');
-loadSkeleton().then(() => loadNamedAnatomy()).then(() => {
-  setLoadText(`${structures.size} structures · Artec Group scan · CC BY 3.0`);
+loadSkeleton().then(() => loadNamedAnatomy()).then((registration) => {
+  setLoadText(`${structures.size} structures · landmark fit RMS ${Math.round(registration.rmsError * 1000)} mm · Artec scan CC BY 3.0`);
   updateStructureCount(); buildSystemControls(); buildStructureBrowser();
   buildAnatomyLabels();
   $('#restore-view').disabled = !localStorage.getItem('mediview-anatomy-view');

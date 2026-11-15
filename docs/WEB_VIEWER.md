@@ -9,33 +9,34 @@ organs and vessel paths. The desktop C++ application remains separate.
 - Skeleton scan: one joined mesh from the supplied `.blend` file.
 - Cardiovascular: heart, central aorta and vena cava, carotid paths, and named
   limb artery and vein paths.
-- Respiratory: left and right lungs.
-- Digestive: liver and stomach.
-- Urinary: left and right kidneys and bladder.
+- Respiratory: left and right lungs with lobes, trachea, and main/lobar bronchi.
+- Digestive: liver, gallbladder, stomach, pancreas, esophagus, small intestine,
+  and large intestine.
+- Urinary: left and right kidneys, adrenal glands, and bladder.
+- Lymphatic: spleen.
 
 Only systems represented in the supplied assets are listed. The joined scan
-does not contain independently selectable bone objects. The viewer does not
-invent missing muscles, nerves, reproductive organs, or other structures.
-Descriptions are concise educational summaries and the supplied anatomy meshes
-are schematic, not clinical segmentations.
+does not contain independently selectable bone objects. Small-intestine data
+includes the duodenum and jejunum; the source set does not include an ileum
+mesh. Muscle and nerve layers remain unavailable until their own assets are
+added. These models are educational adaptations, not clinical segmentations.
 
-The named OBJ anatomy uses negative Z for the anterior side: the sternum lies
-in front of the vertebral column, and the paired `L` structures occupy
-negative X. The viewer uses a negative-Z anterior camera, keeps the supplied
-left/right mesh orientation intact, and labels sides from the patient's
-perspective. It also uses narrower, smooth tube paths for the supplied artery
-and vein routes so they read as connected branches alongside the bones. The
-included vessel data remains simplified and is not a complete vascular
-segmentation.
+Organs in `assets/anatomy/organs.glb` are adapted from Z-Anatomy CC BY-SA 4.0
+meshes and exported as named Draco-compressed structures. Their left/right
+convention is corrected for the viewer. Registration fits the named OBJ
+reference bones to scan surface samples at the skull, clavicles, sternum,
+pelvis, knees, and lower legs. Organ scale and placement are then measured from
+the registered ribs, sternum, thoracic vertebrae, pelvis, and scan front/back
+profiles; the organ layer no longer uses whole-body bounding-box registration.
+The source reference retains negative Z for anterior and negative X for the
+patient's left. Labels and metadata use the patient's perspective.
 
-The browser measures the companion OBJ and skeleton scan bounds, then applies
-one uniform scale and translation to the named anatomy group so both layers
-share the same origin and body height. The initial camera frames the head
-through pelvis at a three-quarter angle; choose **Full body** to fit the complete
-scan. A PMREM RoomEnvironment and soft key, fill, and rim lights shade the ivory
-bones. The scene uses a navy-indigo gradient with no grid or fog. Organ labels
-appear only for a hovered or selected organ, with leader lines. The source mesh
-data is unchanged; registration is a scene transform.
+The initial camera frames the head through pelvis at a three-quarter angle;
+choose **Full body** to fit the complete scan. A PMREM RoomEnvironment and soft
+key, fill, and rim lights shade the ivory bones. The scene uses a navy-indigo
+gradient with no grid or fog. Organ labels appear only for a hovered or
+selected structure, with leader lines. Vessel paths remain simplified and are
+not a complete vascular segmentation; they are outside the organ asset export.
 
 ## Controls
 
@@ -61,22 +62,45 @@ data is unchanged; registration is a scene transform.
 ## Run locally
 
 From the repository root, serve the project files with any static HTTP server.
-For example, with Python installed:
+For example:
 
 ```bash
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000/web/`. The static server must serve the top-level
-`assets/anatomy/` directory because the web viewer fetches its models from
+Open `http://localhost:8000/web/`. The server must also serve the top-level
+`assets/anatomy/` directory because the viewer fetches its models from
 `/assets/anatomy/`. A direct `file://` URL will not work because browser module
 and model requests require HTTP.
+
+## Regenerate organ assets
+
+The exporter requires these upstream files under `evidence/z-anatomy/`:
+
+- `VisceralSystem100.fbx`
+- `CardioVascular41.fbx`
+- `LymphoidOrgans100.fbx`
+
+Download them from the Z-Anatomy PC-Version FBX model directory linked in
+[`ATTRIBUTION.md`](ATTRIBUTION.md). They are ignored by Git and are only needed
+to regenerate the committed `assets/anatomy/organs.glb`. Run:
+
+```bash
+blender --background --python scripts/export_z_anatomy_organs.py
+```
+
+The exporter checks that every named source mesh exists and that each final
+organ is at or below 60,000 triangles. The GLB is Draco-compressed. Its
+Z-Anatomy-derived content is licensed CC BY-SA 4.0; see
+[`ATTRIBUTION.md`](ATTRIBUTION.md).
 
 ## Deploy
 
 The Render Blueprint and Vercel configuration copy the anatomy files into the
-web publish directory during deployment. Connect either service to the desired
-Git branch; pushes to that branch trigger updates. The viewer loads Three.js,
+web publish directory during deployment. The organ exporter replaces the
+existing `organs.glb`, so no deployment copy-command changes are needed.
+Connect either service to the desired Git branch; pushes to that branch trigger
+updates. The viewer loads Three.js,
 the Draco decoder, and fonts from public CDNs, so browsers need network access
 to those hosts.
 

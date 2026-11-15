@@ -75,23 +75,27 @@ in [`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt).
 The `web/` folder contains the browser anatomy studio. It loads the Blender
 skeleton GLB, named organ meshes from `assets/anatomy/organs.glb`, and uses
 companion OBJ landmarks plus the scan geometry to generate tapered, branched
-arterial and venous paths at runtime. Regenerate the browser organ asset
-from the repository root with
-`blender --background --python scripts/generate_web_organs.py`; the script
-exports separate named meshes in the OBJ's metre-scale, Y-up coordinate frame.
-These authored shapes are educational visualizations, not clinical
-segmentations. The browser structure list, system visibility, search,
-selection details, per-structure opacity, isolation, labels, camera presets,
-pan/rotate/zoom, measurement, guided tour, screenshot capture, and saved views
-operate on those structures. Three.js and its Draco decoder are loaded from
-jsDelivr, so the viewer needs an internet connection.
+arterial and venous paths at runtime. Its heart, lobed lungs, digestive organs,
+kidneys, adrenal glands, spleen, trachea, and bronchi use adapted Z-Anatomy
+meshes. The viewer registers the named reference bones to scan surface
+landmarks, then places organs inside measured rib-cage, spinal, and pelvic
+regions. The Z-Anatomy-derived small-intestine asset includes the duodenum and
+jejunum; an ileum mesh is not included.
 
-The supplied assets cover the scan skeleton, heart, lungs, liver, stomach,
-kidneys, and bladder; the browser vessel paths are generated from the OBJ's
-named skeleton landmarks. The supplied Blender scan is a single joined object,
-so its individual bones cannot be selected separately.
-Muscle, nervous, reproductive, and other systems without supplied meshes are
-not shown as available layers.
+The browser structure list, system visibility, search, selection details,
+per-structure opacity, isolation, labels, camera presets, pan/rotate/zoom,
+measurement, guided tour, screenshot capture, and saved views operate on the
+named structures. Three.js and its Draco decoder are loaded from jsDelivr, so
+the viewer needs an internet connection.
+
+Regenerate `assets/anatomy/organs.glb` with
+`blender --background --python scripts/export_z_anatomy_organs.py`. The
+exporter reads three ignored source FBXs from `evidence/z-anatomy/`; their exact
+source URLs, filenames, and CC BY-SA 4.0 attribution are documented in
+[`docs/ATTRIBUTION.md`](docs/ATTRIBUTION.md). Each exported organ is capped at
+60,000 triangles and the asset is Draco-compressed. The supplied Blender scan
+is a single joined object, so individual bones cannot be selected separately.
+Muscle and nerve layers remain unavailable until their source assets are added.
 
 To host it on Render, create a Blueprint from this repository and select the
 `kyle-3d-skeleton-render` branch. The root [`render.yaml`](render.yaml)
