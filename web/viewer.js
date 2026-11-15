@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { setupLighting } from './lighting.js';
+import { createBoneMaterial, fitCameraToSkeleton } from './skeleton.js';
 import { buildVesselStructures, vesselStructureNames } from './vessels.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -26,7 +28,7 @@ renderer.toneMappingExposure = 1.02;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-const camera = new THREE.PerspectiveCamera(43, window.innerWidth / window.innerHeight, 0.05, 50);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.05, 50);
 camera.position.set(0, 0.05, 3.65);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
@@ -37,19 +39,7 @@ controls.maxDistance = 8;
 controls.maxPolarAngle = Math.PI * 0.95;
 controls.screenSpacePanning = true;
 controls.update();
-
-scene.add(new THREE.HemisphereLight(0xcbd8e6, 0x282b35, 1.35));
-const keyLight = new THREE.DirectionalLight(0xf5f6ff, 3.0);
-keyLight.position.set(-2.5, 4, 3);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
-scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(0x87b8d1, 0.9);
-fillLight.position.set(2, 1.2, -3);
-scene.add(fillLight);
-const rimLight = new THREE.PointLight(0x43bea9, 0.45, 8);
-rimLight.position.set(0, -0.2, -2.3);
-scene.add(rimLight);
+setupLighting(renderer, scene);
 
 const anatomyRoot = new THREE.Group();
 scene.add(anatomyRoot);
@@ -123,20 +113,10 @@ for (const system of systems.values()) {
   (system.id === 'skeleton' ? anatomyRoot : namedAnatomyRoot).add(system.group);
 }
 
-const grid = new THREE.GridHelper(3.2, 16, 0x40566b, 0x293b4c);
-grid.position.y = -0.86;
-grid.material.transparent = true;
-grid.material.opacity = 0.075;
-scene.add(grid);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), new THREE.ShadowMaterial({ opacity: 0.15 }));
-ground.rotation.x = -Math.PI / 2;
-ground.position.y = -0.865;
-ground.receiveShadow = true;
-scene.add(ground);
-
 const structures = new Map();
 let selectedRecord = null;
 let hoveredRecord = null;
+let cameraFraming = 'torso';
 let activeCategoryFilter = null;
 let labelsEnabled = true;
 let measureMode = false;
@@ -198,32 +178,6 @@ function setLoadText(message, error = false) {
   loadState.classList.toggle('error', error);
   loadState.innerHTML = error ? `<span>${message}</span>` : `<span class="spinner"></span><span>${message}</span>`;
 }
-function createBoneMaterial() {
-  const material = new THREE.MeshPhysicalMaterial({
-    color: 0xe4d8c2,
-    roughness: 0.56,
-    metalness: 0,
-    clearcoat: 0.12,
-    clearcoatRoughness: 0.72,
-    specularIntensity: 0.18,
-    side: THREE.DoubleSide,
-  });
-  material.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <opaque_fragment>', `
-        float boneXray = clamp(1.0 - diffuseColor.a, 0.0, 1.0);
-        float boneFacing = abs(dot(normalize(normal), normalize(vViewPosition)));
-        float boneFresnel = pow(1.0 - clamp(boneFacing, 0.0, 1.0), 2.4);
-        float boneCavity = clamp((length(dFdx(normal)) + length(dFdy(normal))) * 0.035, 0.0, 0.2);
-        outgoingLight *= 1.0 - boneCavity * (1.0 - boneXray);
-        outgoingLight = mix(outgoingLight, vec3(0.44, 0.74, 1.0), boneFresnel * boneXray * 0.95);
-        diffuseColor.a = mix(diffuseColor.a, 0.10 + boneFresnel * 0.62, boneXray);
-        #include <opaque_fragment>
-      `);
-  };
-  material.customProgramCacheKey = () => 'mediview-bone-xray-v1';
-  return material;
-}
 function installSkeleton(gltf) {
   const root = gltf.scene;
   root.name = 'Human skeleton';
@@ -239,7 +193,8 @@ function installSkeleton(gltf) {
     object.userData.structureKey = 'Human skeleton';
   });
   recordFromObject('Human skeleton', root, 'skeleton', root);
-  fitCameraToModel(root);
+  cameraFraming = 'torso';
+  fitCameraToSkeleton(root, camera, controls, cameraFraming);
   buildSystemControls();
   buildStructureBrowser();
   updateStructureCount();
@@ -484,22 +439,6 @@ function focusRecord(record) {
   camera.position.copy(center).addScaledVector(direction.lengthSq() ? direction : new THREE.Vector3(0, 0, 1), distance);
   controls.update();
 }
-function fitCameraToModel(root) {
-  const bounds = new THREE.Box3().setFromObject(root);
-  if (bounds.isEmpty()) return;
-  const size = bounds.getSize(new THREE.Vector3());
-  const center = bounds.getCenter(new THREE.Vector3());
-  controls.target.copy(center);
-  const verticalDistance = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.72);
-  const horizontalDistance = size.x / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * camera.aspect * 0.72);
-  const distance = Math.max(verticalDistance, horizontalDistance, 1.35);
-  const anteriorThreeQuarter = new THREE.Vector3(0.24, 0, 0.971).normalize();
-  camera.up.set(0, 1, 0);
-  camera.position.copy(center).addScaledVector(anteriorThreeQuarter, distance);
-  controls.minDistance = Math.max(0.4, size.y * 0.58);
-  controls.maxDistance = Math.max(7, size.y * 5.5);
-  controls.update();
-}
 function applyIsolation() {
   for (const system of systems.values()) {
     for (const record of system.structures) {
@@ -699,16 +638,31 @@ const viewDirections = {
   bottom: { direction: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, 1), label: 'INFERIOR' },
 };
 function setView(name) {
+  if (name === 'full-body') {
+    const scan = structures.get('Human skeleton');
+    if (!scan || !fitCameraToSkeleton(scan.root, camera, controls, 'full')) return;
+    cameraFraming = 'full';
+    $('.model-name').textContent = 'FULL BODY · ANTERIOR';
+    document.querySelectorAll('.view-button').forEach((button) => button.classList.toggle('active', button.dataset.view === name));
+    return;
+  }
   const view = viewDirections[name]; if (!view) return;
   const distance = camera.position.distanceTo(controls.target);
   camera.up.copy(view.up);
   camera.position.copy(controls.target).addScaledVector(view.direction, distance);
   controls.update();
-  $('.model-name').textContent = `FULL BODY · ${view.label}`;
+  $('.model-name').textContent = `${cameraFraming === 'full' ? 'FULL BODY' : 'TORSO'} · ${view.label}`;
   document.querySelectorAll('.view-button').forEach((button) => button.classList.toggle('active', button.dataset.view === name));
 }
 document.querySelectorAll('.view-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
-$('#reset-camera').addEventListener('click', () => { const scan = structures.get('Human skeleton'); if (scan) fitCameraToModel(scan.root); setView('front'); });
+$('#reset-camera').addEventListener('click', () => {
+  const scan = structures.get('Human skeleton');
+  if (scan) {
+    cameraFraming = 'torso';
+    fitCameraToSkeleton(scan.root, camera, controls, cameraFraming);
+  }
+  setView('front');
+});
 $('#labels').addEventListener('click', () => {
   labelsEnabled = !labelsEnabled; $('#labels').classList.toggle('selected', labelsEnabled); updateAnnotation(); updateAnatomyLabels();
 });
@@ -732,6 +686,7 @@ window.addEventListener('keydown', (event) => {
   if (event.key === '2') setView('back');
   if (event.key === '3') setView('left');
   if (event.key === '4') setView('right');
+  if (event.key === '5') setView('full-body');
 });
 
 function addMeasurePoint(point) {

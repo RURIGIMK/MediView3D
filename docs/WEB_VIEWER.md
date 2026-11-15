@@ -30,31 +30,33 @@ segmentation.
 
 The browser measures the companion OBJ and skeleton scan bounds, then applies
 one uniform scale and translation to the named anatomy group so both layers
-share the same origin and body height. The initial camera fits the complete
-scan to the available view. Front-view organ labels project from each mesh
-center and use leader lines; labels on each side are spaced to reduce overlap.
-Lighting is balanced to preserve bone detail without washing out the scan. The
-source mesh data is unchanged; registration is a scene transform.
+share the same origin and body height. The initial camera frames the head
+through pelvis at a three-quarter angle; choose **Full body** to fit the complete
+scan. A PMREM RoomEnvironment and soft key, fill, and rim lights shade the ivory
+bones. The scene uses a navy-indigo gradient with no grid or fog. Organ labels
+appear only for a hovered or selected organ, with leader lines. The source mesh
+data is unchanged; registration is a scene transform.
 
 ## Controls
 
 - Drag with the left mouse button to orbit; right drag or Shift + left drag to
   pan; scroll to zoom.
-- Use the Front, Back, Left, Right, Top, and Bottom controls for standard views.
+- Use Full body, Front, Back, Left, Right, Top, and Bottom controls for standard
+  views; `5` selects the full-body framing.
 - Search or select an item in the structure browser, or click a mesh in the
   scene, to view its name, system, location, function, and description.
 - Toggle system chips or the eye icon beside an individual structure. Right
   click a system chip to isolate that system.
 - Use the opacity slider or **Isolate structure** in the information panel.
 - **Measure** records the distance between two clicked points in centimetres.
-- Major organs have front-view labels with leader lines; selecting one replaces
-  its label with a selected-structure callout. **Labels** toggles annotations.
+- Major organs show a leader-line label on hover or selection. **Labels**
+  toggles annotations.
   **Guided tour** visits
   supplied structures. **Capture** downloads a PNG screenshot.
 - **Save view** stores camera and visibility settings in the current browser;
   **Load view** restores them on that device.
-- Keyboard shortcuts: `/` focuses search, `R` resets the camera, and `1`–`4`
-  select Front, Back, Left, and Right views.
+- Keyboard shortcuts: `/` focuses search, `R` resets the camera, `1`–`4`
+  select Front, Back, Left, and Right views, and `5` selects Full body.
 
 ## Run locally
 
