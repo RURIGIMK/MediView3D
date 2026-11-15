@@ -300,5 +300,30 @@ int main() {
         require(scanlineFillPoints({{0,0},{4,4}}).empty(), "two-vertex polygon should produce no fill");
     });
 
+    suite.run("Bezier default sampling, convex hull, and collinear controls", [] {
+        const Point2D p0{0,0}, p1{2,6}, p2{7,-3}, p3{9,4};
+        const auto curve = bezierCurve(p0, p1, p2, p3);
+        requireEqual(curve.size(), static_cast<std::size_t>(81), "default Bezier sample count");
+        for (const auto p : curve) {
+            require(p.x >= 0 - kEpsilon && p.x <= 9 + kEpsilon && p.y >= -3 - kEpsilon && p.y <= 6 + kEpsilon,
+                    "Bezier point escapes the control-point bounding box");
+        }
+        for (const auto p : bezierCurve({0,2},{3,2},{6,2},{9,2}, 10)) {
+            require(near(p.y, 2.0), "collinear control points should produce a straight line");
+        }
+    });
+
+    suite.run("Catmull-Rom passes through every control point", [] {
+        const std::vector<Point2D> controls{{0,0},{3,4},{6,1},{9,5},{12,0}};
+        const int n = 5;
+        const auto spline = catmullRomSpline(controls, n);
+        requireEqual(spline.size(), static_cast<std::size_t>((controls.size() - 1) * n + 1), "multi-segment spline point count");
+        for (std::size_t i = 0; i < controls.size(); ++i) {
+            require(same(spline[i * n], controls[i]), "spline does not pass through a control point");
+        }
+        requireEqual(catmullRomSpline(controls).size(), static_cast<std::size_t>((controls.size() - 1) * 20 + 1),
+                     "default spline sample count");
+    });
+
     return suite.summary();
 }
