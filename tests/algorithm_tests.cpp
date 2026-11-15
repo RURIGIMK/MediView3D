@@ -277,5 +277,28 @@ int main() {
                 "negative-axis ellipse should be empty");
     });
 
+    suite.run("Polygon clipping a triangle that crosses one window edge", [] {
+        const Rect r{0, 0, 10, 10};
+        const auto result = clipPolygon({{5,5},{15,5},{5,8}}, r);
+        const Point2D expected[] = {{5,5},{10,5},{10,6.5},{5,8}};
+        requireEqual(result.size(), static_cast<std::size_t>(4), "edge-crossing triangle vertex count");
+        for (const auto want : expected) {
+            require(std::any_of(result.begin(), result.end(), [&](Point2D got){ return same(got, want); }),
+                    "edge-crossing triangle is missing an expected vertex");
+        }
+        verifyInside(result, r);
+        require(clipPolygon({}, r).empty(), "empty polygon should stay empty after clipping");
+    });
+
+    suite.run("Scanline fill stays inside a triangle and ignores degenerate input", [] {
+        const auto fill = scanlineFillPoints({{0,0},{6,0},{0,6}});
+        require(!fill.empty(), "triangle fill is empty");
+        for (const auto p : fill) {
+            require(p.x >= 0 && p.y >= 0 && p.x + p.y <= 6 + kEpsilon, "fill point lies outside the triangle");
+        }
+        require(scanlineFillPoints({}).empty(), "empty polygon should produce no fill");
+        require(scanlineFillPoints({{0,0},{4,4}}).empty(), "two-vertex polygon should produce no fill");
+    });
+
     return suite.summary();
 }
