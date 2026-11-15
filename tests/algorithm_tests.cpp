@@ -237,5 +237,45 @@ int main() {
         require(twoPoint.size() == 3 && same(twoPoint.front(), {0,0}) && same(twoPoint.back(), {2,4}), "two-point spline endpoint interpolation failed");
     });
 
+    suite.run("Bresenham pixel count matches the major axis for arbitrary lines", [] {
+        const int lines[][4] = {{0,0,7,3},{-5,2,1,-9},{3,3,-8,4},{10,-4,10,6},{-6,-6,6,6}};
+        for (const auto& l : lines) {
+            const auto line = bresenhamLine(l[0], l[1], l[2], l[3]);
+            const auto major = static_cast<std::size_t>(std::max(std::abs(l[2] - l[0]), std::abs(l[3] - l[1])));
+            verifyLine(line, {double(l[0]), double(l[1])}, {double(l[2]), double(l[3])}, major + 1, "Bresenham major axis");
+        }
+    });
+
+    suite.run("Midpoint circle points lie on the radius and reach the extremes", [] {
+        const int cx = -4, cy = 7, r = 9;
+        const auto circle = midpointCircle(cx, cy, r);
+        const auto pixels = asSet(circle);
+        for (const auto p : circle) {
+            const double dist = std::hypot(p.x - cx, p.y - cy);
+            require(std::abs(dist - r) < 1.0, "circle point is more than one pixel away from the radius");
+            const int dx = static_cast<int>(p.x) - cx;
+            const int dy = static_cast<int>(p.y) - cy;
+            require(pixels.count({cx + dy, cy + dx}), "circle is missing diagonal (x/y swap) symmetry");
+        }
+        require(pixels.count({cx + r, cy}) && pixels.count({cx - r, cy}) &&
+                pixels.count({cx, cy + r}) && pixels.count({cx, cy - r}),
+                "circle does not reach all four axis extremes");
+    });
+
+    suite.run("Midpoint ellipse stays inside its bounding box and reaches the extremes", [] {
+        const int cx = 5, cy = -3, rx = 8, ry = 4;
+        const auto ellipse = midpointEllipse(cx, cy, rx, ry);
+        const auto pixels = asSet(ellipse);
+        for (const auto p : ellipse) {
+            require(p.x >= cx - rx && p.x <= cx + rx && p.y >= cy - ry && p.y <= cy + ry,
+                    "ellipse point lies outside its bounding box");
+        }
+        require(pixels.count({cx + rx, cy}) && pixels.count({cx - rx, cy}) &&
+                pixels.count({cx, cy + ry}) && pixels.count({cx, cy - ry}),
+                "ellipse does not reach all four axis extremes");
+        require(midpointEllipse(0, 0, -1, 3).empty() && midpointEllipse(0, 0, 3, -1).empty(),
+                "negative-axis ellipse should be empty");
+    });
+
     return suite.summary();
 }
