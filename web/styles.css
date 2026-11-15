@@ -55,3 +55,5 @@ body.interface-hidden .header-actions{position:fixed;top:12px;right:12px;z-index
 body.interface-hidden .interface-toggle{border-color:#8fa4b755;background:rgba(8,13,20,.78);color:#e7f0f7;box-shadow:0 5px 18px #0005;backdrop-filter:blur(14px)}
 @media(min-width:651px) and (max-width:1000px){.top-context{margin-right:18px}.view-toolbar{left:50%;right:auto;top:76px;transform:translateX(-50%)}}
 @media(max-width:650px){.top-context{display:none}.view-toolbar{left:auto;right:8px;top:auto;bottom:66px;transform:none}.header-actions{gap:4px}.header-button{height:30px;padding:0 6px;font-size:8px}.button-full{display:none}.button-compact{display:inline}.layer-copy>span{font-size:9px}.layer-copy small{font-size:6px}.system-details summary{padding:7px 2px}.anatomy-label{max-width:105px;font-size:7px}}
+.attribution-link{color:inherit;text-decoration:none}.attribution-link:hover{text-decoration:underline;color:#d7e3ed}
+ .layer-opacity{padding:9px 1px 3px;border-bottom:1px solid var(--line)}.layer-opacity .opacity-label{font-size:8px}.layer-opacity .range{margin:8px 0 1px}.layer-button:disabled:not(.coming-soon){cursor:progress;opacity:.72}

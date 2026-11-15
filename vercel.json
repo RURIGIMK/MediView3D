@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "mkdir -p web/assets/anatomy && cp assets/anatomy/skeleton_scan.glb assets/anatomy/organs.glb assets/anatomy/mediview_anatomy.obj assets/anatomy/mediview_anatomy.mtl web/assets/anatomy/",
+  "buildCommand": "mkdir -p web/assets/anatomy && cp assets/anatomy/skeleton_scan.glb assets/anatomy/organs.glb assets/anatomy/muscles.glb assets/anatomy/nerves.glb assets/anatomy/mediview_anatomy.obj assets/anatomy/mediview_anatomy.mtl web/assets/anatomy/",
   "outputDirectory": "web"
 }

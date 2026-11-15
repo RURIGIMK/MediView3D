@@ -26,6 +26,10 @@
       <label class="search-box"><span aria-hidden="true">⌕</span><input id="structure-search" type="search" placeholder="Search anatomy" autocomplete="off" aria-label="Search anatomical structures" /><kbd>/</kbd></label>
       <div class="system-title"><span>ANATOMY LAYERS</span><button id="reset-layers" class="text-button">Reset</button></div>
       <div id="layer-list" class="layer-list" aria-label="Anatomy layer visibility"></div>
+      <div id="muscle-opacity-control" class="layer-opacity" hidden>
+        <label class="opacity-label" for="muscle-opacity-slider"><span>Muscle layer opacity</span><output id="muscle-opacity-value">100%</output></label>
+        <input id="muscle-opacity-slider" class="range" type="range" min="15" max="100" value="100" />
+      </div>
       <details class="system-details">
         <summary><span>ANATOMICAL SYSTEMS</span><span class="system-details-hint">Advanced</span></summary>
         <div id="system-list" class="system-list" aria-label="Anatomical system visibility"></div>
@@ -74,7 +78,7 @@
     <div id="measure-hint" class="measure-hint" hidden>Click two points on the model to measure <button id="cancel-measure">Cancel</button></div>
     <div id="tour-card" class="tour-card panel" hidden><div><span class="eyebrow">GUIDED EXPLORATION</span><b id="tour-title"></b><span id="tour-progress"></span></div><button id="tour-next" class="tour-next">Next →</button><button id="tour-close" class="icon-button small">×</button></div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <footer class="disclaimer"><span>EDUCATIONAL VISUALIZATION</span><span>Not for diagnosis or treatment</span></footer>
+    <footer class="disclaimer"><span>EDUCATIONAL VISUALIZATION</span><span>Not for diagnosis or treatment</span><span>Models: <a class="attribution-link" href="https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX" target="_blank" rel="noreferrer">Z-Anatomy · CC BY-SA 4.0</a></span></footer>
 
     <script type="module" src="./viewer.js"></script>
   </body>
