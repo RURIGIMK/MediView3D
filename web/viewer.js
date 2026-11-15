@@ -2,23 +2,22 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { buildVesselStructures, vesselStructureNames } from './vessels.js';
 
 const $ = (selector) => document.querySelector(selector);
 const canvas = $('#viewer');
 const loadState = $('#load-state');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080d14);
-scene.fog = new THREE.Fog(0x080d14, 10, 22);
 
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
 } catch (error) {
   loadState.innerHTML = '<span class="error">WebGL is unavailable in this browser.</span>';
   throw error;
 }
+renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -67,8 +66,17 @@ const anatomyLabelDefinitions = {
   Kidney_L: { text: 'LEFT KIDNEY', x: 56, y: 0, align: 'left' },
   Bladder: { text: 'BLADDER', x: 0, y: 25, align: 'center' },
 };
+const organStructureNames = new Set(['Heart', 'Lung_L', 'Lung_R', 'Liver', 'Stomach', 'Kidney_L', 'Kidney_R', 'Bladder']);
+const layerDefinitions = [
+  { id: 'skeleton', label: 'Skeleton', color: '#cbd5df', visible: true, matches: (record) => record.name === 'Human skeleton' },
+  { id: 'organs', label: 'Organs', color: '#cf7a82', visible: true, matches: (record) => organStructureNames.has(record.name) },
+  { id: 'vessels', label: 'Vessels', color: '#e96773', visible: true, matches: (record) => vesselStructureNames.has(record.name) },
+  { id: 'muscles', label: 'Muscles', color: '#7d8b98', available: false },
+  { id: 'nerves', label: 'Nerves', color: '#7d8b98', available: false },
+];
 const anatomyLabelNodes = new Map();
 const anatomyLeaderLines = new Map();
+const anatomyLabelMeshes = [];
 const categoryDefinitions = [
   { id: 'skeleton', label: 'Skeleton', color: '#cbd5df' },
   { id: 'cardiovascular', label: 'Cardiovascular', color: '#e96773' },
@@ -87,18 +95,18 @@ const structureMeta = {
   Kidney_L: { category: 'urinary', location: 'Posterior upper abdomen on the left.', function: 'Filters blood and contributes to fluid, electrolyte, and acid-base regulation.', description: 'This is the left kidney structure present in the supplied model.' },
   Kidney_R: { category: 'urinary', location: 'Posterior upper abdomen on the right.', function: 'Filters blood and contributes to fluid, electrolyte, and acid-base regulation.', description: 'This is the right kidney structure present in the supplied model.' },
   Bladder: { category: 'urinary', location: 'Pelvis, behind the pubic symphysis.', function: 'Stores urine before it is released from the body.', description: 'This is the bladder structure present in the supplied model.' },
-  Aorta_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Carries oxygenated blood from the heart to the systemic circulation.', description: 'Aorta segment included in the supplied anatomy export.' },
-  VenaCava_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Returns systemic venous blood toward the heart.', description: 'Central vena cava segment included in the supplied anatomy export.' },
-  Carotid_L: { category: 'cardiovascular', location: 'Left side of the neck.', function: 'Supplies arterial blood toward the head and neck.', description: 'Left carotid pathway included in the supplied anatomy export.' },
-  Carotid_R: { category: 'cardiovascular', location: 'Right side of the neck.', function: 'Supplies arterial blood toward the head and neck.', description: 'Right carotid pathway included in the supplied anatomy export.' },
-  Artery_Arm_L: { category: 'cardiovascular', location: 'Left upper limb.', function: 'Represents an arterial pathway supplying the left upper limb.', description: 'This is a simplified arm artery pathway in the supplied model.' },
-  Vein_Arm_L: { category: 'cardiovascular', location: 'Left upper limb.', function: 'Represents a venous pathway returning blood from the left upper limb.', description: 'This is a simplified arm vein pathway in the supplied model.' },
-  Artery_Arm_R: { category: 'cardiovascular', location: 'Right upper limb.', function: 'Represents an arterial pathway supplying the right upper limb.', description: 'This is a simplified arm artery pathway in the supplied model.' },
-  Vein_Arm_R: { category: 'cardiovascular', location: 'Right upper limb.', function: 'Represents a venous pathway returning blood from the right upper limb.', description: 'This is a simplified arm vein pathway in the supplied model.' },
-  Artery_Leg_L: { category: 'cardiovascular', location: 'Left lower limb.', function: 'Represents an arterial pathway supplying the left lower limb.', description: 'This is a simplified leg artery pathway in the supplied model.' },
-  Vein_Leg_L: { category: 'cardiovascular', location: 'Left lower limb.', function: 'Represents a venous pathway returning blood from the left lower limb.', description: 'This is a simplified leg vein pathway in the supplied model.' },
-  Artery_Leg_R: { category: 'cardiovascular', location: 'Right lower limb.', function: 'Represents an arterial pathway supplying the right lower limb.', description: 'This is a simplified leg artery pathway in the supplied model.' },
-  Vein_Leg_R: { category: 'cardiovascular', location: 'Right lower limb.', function: 'Represents a venous pathway returning blood from the right lower limb.', description: 'This is a simplified leg vein pathway in the supplied model.' },
+  Aorta_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Carries oxygenated blood from the heart to the systemic circulation.', description: 'A landmark-driven educational path through the thorax and abdomen.' },
+  VenaCava_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Returns systemic venous blood toward the heart.', description: 'A landmark-driven educational return path through the abdomen and thorax.' },
+  Carotid_L: { category: 'cardiovascular', location: 'Left side of the neck.', function: 'Supplies arterial blood toward the head and neck.', description: 'A simplified carotid path generated from the skeleton landmarks.' },
+  Carotid_R: { category: 'cardiovascular', location: 'Right side of the neck.', function: 'Supplies arterial blood toward the head and neck.', description: 'A simplified carotid path generated from the skeleton landmarks.' },
+  Artery_Arm_L: { category: 'cardiovascular', location: 'Left upper limb.', function: 'Represents an arterial pathway supplying the left upper limb.', description: 'A simplified, tapered arm artery path generated from the skeleton landmarks.' },
+  Vein_Arm_L: { category: 'cardiovascular', location: 'Left upper limb.', function: 'Represents a venous pathway returning blood from the left upper limb.', description: 'A simplified, tapered arm vein path returning toward the vena cava.' },
+  Artery_Arm_R: { category: 'cardiovascular', location: 'Right upper limb.', function: 'Represents an arterial pathway supplying the right upper limb.', description: 'A simplified, tapered arm artery path generated from the skeleton landmarks.' },
+  Vein_Arm_R: { category: 'cardiovascular', location: 'Right upper limb.', function: 'Represents a venous pathway returning blood from the right upper limb.', description: 'A simplified, tapered arm vein path returning toward the vena cava.' },
+  Artery_Leg_L: { category: 'cardiovascular', location: 'Left lower limb.', function: 'Represents an arterial pathway supplying the left lower limb.', description: 'A simplified, tapered leg artery path generated from the skeleton landmarks.' },
+  Vein_Leg_L: { category: 'cardiovascular', location: 'Left lower limb.', function: 'Represents a venous pathway returning blood from the left lower limb.', description: 'A simplified, tapered leg vein path returning toward the vena cava.' },
+  Artery_Leg_R: { category: 'cardiovascular', location: 'Right lower limb.', function: 'Represents an arterial pathway supplying the right lower limb.', description: 'A simplified, tapered leg artery path generated from the skeleton landmarks.' },
+  Vein_Leg_R: { category: 'cardiovascular', location: 'Right lower limb.', function: 'Represents a venous pathway returning blood from the right lower limb.', description: 'A simplified, tapered leg vein path returning toward the vena cava.' },
 };
 const displayNames = {
   'Human skeleton': 'Full skeleton scan', Lung_L: 'Left lung', Lung_R: 'Right lung',
@@ -118,7 +126,7 @@ for (const system of systems.values()) {
 const grid = new THREE.GridHelper(3.2, 16, 0x40566b, 0x293b4c);
 grid.position.y = -0.86;
 grid.material.transparent = true;
-grid.material.opacity = 0.58;
+grid.material.opacity = 0.075;
 scene.add(grid);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), new THREE.ShadowMaterial({ opacity: 0.15 }));
 ground.rotation.x = -Math.PI / 2;
@@ -128,6 +136,7 @@ scene.add(ground);
 
 const structures = new Map();
 let selectedRecord = null;
+let hoveredRecord = null;
 let activeCategoryFilter = null;
 let labelsEnabled = true;
 let measureMode = false;
@@ -140,6 +149,8 @@ const annotation = $('#annotation');
 const raycaster = new THREE.Raycaster();
 raycaster.params.Line.threshold = 0.018;
 const pointer = new THREE.Vector2();
+const annotationProjectionPoint = new THREE.Vector3();
+const anatomyLabelProjectionPoint = new THREE.Vector3();
 
 function friendlyName(name) {
   if (displayNames[name]) return displayNames[name];
@@ -187,14 +198,44 @@ function setLoadText(message, error = false) {
   loadState.classList.toggle('error', error);
   loadState.innerHTML = error ? `<span>${message}</span>` : `<span class="spinner"></span><span>${message}</span>`;
 }
+function createBoneMaterial() {
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0xe4d8c2,
+    roughness: 0.56,
+    metalness: 0,
+    clearcoat: 0.12,
+    clearcoatRoughness: 0.72,
+    specularIntensity: 0.18,
+    side: THREE.DoubleSide,
+  });
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <opaque_fragment>', `
+        float boneXray = clamp(1.0 - diffuseColor.a, 0.0, 1.0);
+        float boneFacing = abs(dot(normalize(normal), normalize(vViewPosition)));
+        float boneFresnel = pow(1.0 - clamp(boneFacing, 0.0, 1.0), 2.4);
+        float boneCavity = clamp((length(dFdx(normal)) + length(dFdy(normal))) * 0.035, 0.0, 0.2);
+        outgoingLight *= 1.0 - boneCavity * (1.0 - boneXray);
+        outgoingLight = mix(outgoingLight, vec3(0.44, 0.74, 1.0), boneFresnel * boneXray * 0.95);
+        diffuseColor.a = mix(diffuseColor.a, 0.10 + boneFresnel * 0.62, boneXray);
+        #include <opaque_fragment>
+      `);
+  };
+  material.customProgramCacheKey = () => 'mediview-bone-xray-v1';
+  return material;
+}
 function installSkeleton(gltf) {
   const root = gltf.scene;
   root.name = 'Human skeleton';
   root.userData.structureKey = 'Human skeleton';
+  const boneMaterial = createBoneMaterial();
   root.traverse((object) => {
     if (!object.isMesh) return;
+    object.material.dispose();
+    object.material = boneMaterial;
     object.castShadow = true;
     object.receiveShadow = true;
+    object.renderOrder = 1;
     object.userData.structureKey = 'Human skeleton';
   });
   recordFromObject('Human skeleton', root, 'skeleton', root);
@@ -219,59 +260,49 @@ function loadSkeleton() {
     }, (error) => { draco.dispose(); reject(error); });
   });
 }
-const includedObjStructures = /^(Heart|Lung_[LR]|Liver|Stomach|Kidney_[LR]|Bladder|Aorta_Central|VenaCava_Central|Carotid_[LR]|Artery_(Arm|Leg)_[LR]|Vein_(Arm|Leg)_[LR])$/;
 function loadNamedAnatomy() {
   return new Promise((resolve, reject) => {
-    const materialLoader = new MTLLoader();
-    materialLoader.setPath('/assets/anatomy/');
-    materialLoader.load('mediview_anatomy.mtl', (materials) => {
-      materials.preload();
-      const tissuePalette = {
-        Mat_Artery: 0xa7474e,
-        Mat_Vein: 0x5578b4,
-        Mat_Heart: 0xb94f5c,
-        Mat_Lungs: 0xa17c83,
-        Mat_Liver: 0x956047,
-        Mat_Stomach: 0xb88964,
-        Mat_Kidneys: 0x985b59,
-      };
-      for (const [name, material] of Object.entries(materials.materials)) {
-        if (tissuePalette[name]) material.color.set(tissuePalette[name]);
-        if (material.isMeshPhongMaterial) {
-          material.shininess = 12;
-          material.specular.set(0x181d24);
-          material.needsUpdate = true;
-        }
+    const loader = new OBJLoader();
+    const loadObj = new Promise((loadResolve, loadReject) => {
+      loader.load('/assets/anatomy/mediview_anatomy.obj', loadResolve, undefined, loadReject);
+    });
+    const loadOrgans = new Promise((loadResolve, loadReject) => {
+      new GLTFLoader().load('/assets/anatomy/organs.glb', loadResolve, undefined, loadReject);
+    });
+    Promise.all([loadObj, loadOrgans]).then(([root, organs]) => {
+      root.updateMatrixWorld(true);
+      const sourceBounds = new THREE.Box3().setFromObject(root);
+      const scanBounds = structures.get('Human skeleton')?.bounds;
+      if (!scanBounds || sourceBounds.isEmpty() || scanBounds.isEmpty()) {
+        throw new Error('Unable to register anatomy landmarks to the skeleton scan.');
       }
-      const loader = new OBJLoader();
-      loader.setMaterials(materials);
-      loader.load('/assets/anatomy/mediview_anatomy.obj', (root) => {
-        root.updateMatrixWorld(true);
-        const sourceBounds = new THREE.Box3().setFromObject(root);
-        const scanBounds = structures.get('Human skeleton')?.bounds;
-        if (scanBounds && !sourceBounds.isEmpty() && !scanBounds.isEmpty()) {
-          const sourceSize = sourceBounds.getSize(new THREE.Vector3());
-          const scanSize = scanBounds.getSize(new THREE.Vector3());
-          const sourceCenter = sourceBounds.getCenter(new THREE.Vector3());
-          const scanCenter = scanBounds.getCenter(new THREE.Vector3());
-          const registrationScale = scanSize.y / sourceSize.y;
-          namedAnatomyRoot.scale.setScalar(registrationScale);
-          namedAnatomyRoot.position.copy(scanCenter).addScaledVector(sourceCenter, -registrationScale);
-          namedAnatomyRoot.updateMatrixWorld(true);
-        }
-        for (const object of root.children) {
-          if (!includedObjStructures.test(object.name)) continue;
-          const meta = metadataFor(object.name);
-          if (!meta) continue;
-          recordFromObject(object.name, object, meta.category);
-        }
-        buildSystemControls();
-        buildStructureBrowser();
-        updateStructureCount();
-        buildAnatomyLabels();
-        resolve();
-      }, undefined, reject);
-    }, undefined, reject);
+      const sourceSize = sourceBounds.getSize(new THREE.Vector3());
+      const scanSize = scanBounds.getSize(new THREE.Vector3());
+      const sourceCenter = sourceBounds.getCenter(new THREE.Vector3());
+      const scanCenter = scanBounds.getCenter(new THREE.Vector3());
+      const registrationScale = scanSize.y / sourceSize.y;
+      namedAnatomyRoot.scale.setScalar(registrationScale);
+      namedAnatomyRoot.position.copy(scanCenter).addScaledVector(sourceCenter, -registrationScale);
+      namedAnatomyRoot.updateMatrixWorld(true);
+      for (const object of [...organs.scene.children]) {
+        if (!organStructureNames.has(object.name)) continue;
+        const meta = metadataFor(object.name);
+        if (!meta) continue;
+        recordFromObject(object.name, object, meta.category);
+      }
+      buildVesselStructures({
+        sourceRoot: root,
+        skeletonRoot: structures.get('Human skeleton')?.root,
+        registrationRoot: namedAnatomyRoot,
+        structures,
+        register: (name, vesselRoot) => recordFromObject(name, vesselRoot, 'cardiovascular'),
+      });
+      buildSystemControls();
+      buildStructureBrowser();
+      updateStructureCount();
+      buildAnatomyLabels();
+      resolve();
+    }).catch(reject);
   });
 }
 
@@ -281,13 +312,46 @@ function updateStructureCount() {
   $('#structure-count').textContent = String(count).padStart(2, '0');
   $('#visible-count').textContent = `${availableSystems.length} systems`;
 }
+function layerForRecord(record) {
+  return layerDefinitions.find((layer) => layer.matches?.(record));
+}
+function isRecordVisible(record) {
+  const layer = layerForRecord(record);
+  return record.visible && record.system.visible && (layer?.visible ?? true);
+}
+function buildLayerControls() {
+  const container = $('#layer-list');
+  container.replaceChildren();
+  for (const layer of layerDefinitions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `layer-button${layer.available === false ? ' coming-soon' : ''}`;
+    button.dataset.layer = layer.id;
+    button.style.setProperty('--layer-color', layer.color);
+    if (layer.available === false) {
+      button.disabled = true;
+      button.setAttribute('aria-label', `${layer.label}, coming soon`);
+      button.title = `${layer.label} models are coming soon`;
+      button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>Coming soon</small></span>`;
+    } else {
+      button.setAttribute('aria-pressed', String(layer.visible));
+      button.title = `${layer.visible ? 'Hide' : 'Show'} ${layer.label}`;
+      button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>${layer.visible ? 'Shown' : 'Hidden'}</small></span>`;
+      button.addEventListener('click', () => {
+        layer.visible = !layer.visible;
+        applyVisibility();
+        buildLayerControls();
+        buildStructureBrowser();
+      });
+    }
+    container.append(button);
+  }
+}
 function buildSystemControls() {
   const container = $('#system-list');
-  const current = new Map([...container.querySelectorAll('[data-system]')].map((button) => [button.dataset.system, button.getAttribute('aria-pressed') !== 'false']));
   container.replaceChildren();
   for (const system of systems.values()) {
     if (!system.structures.length) continue;
-    if (current.has(system.id)) system.visible = current.get(system.id);
     const button = document.createElement('button');
     button.className = 'system-chip-button';
     button.dataset.system = system.id;
@@ -308,6 +372,7 @@ function buildSystemControls() {
     });
     container.append(button);
   }
+  buildLayerControls();
 }
 function buildStructureBrowser() {
   const container = $('#structure-list');
@@ -326,7 +391,7 @@ function buildStructureBrowser() {
       const heading = document.createElement('div'); heading.className = 'structure-group-title'; heading.textContent = record.system.label; group.append(heading); container.append(group); lastSystem = record.system.id;
     }
     const row = document.createElement('button');
-    row.className = `structure-item${record === selectedRecord ? ' active' : ''}${record.system.visible && record.visible ? '' : ' hidden-structure'}`;
+    row.className = `structure-item${record === selectedRecord ? ' active' : ''}${isRecordVisible(record) ? '' : ' hidden-structure'}`;
     row.style.setProperty('--system-color', record.system.color);
     row.innerHTML = `<i class="structure-dot"></i><span>${record.displayName}</span><span class="eye">${record.visible ? '◉' : '○'}</span>`;
     row.title = `${record.displayName} · ${record.system.label}`;
@@ -336,15 +401,16 @@ function buildStructureBrowser() {
     });
     group.append(row);
   }
-  $('#visible-count').textContent = `${entries.length} shown`;
+  $('#visible-count').textContent = `${entries.filter(isRecordVisible).length} shown`;
 }
 function applyVisibility() {
   for (const system of systems.values()) {
     system.group.visible = system.visible;
-    for (const record of system.structures) record.root.visible = record.visible;
+    for (const record of system.structures) record.root.visible = record.visible && (layerForRecord(record)?.visible ?? true);
   }
   if (isolatedKey) applyIsolation();
   updateAnnotation();
+  updateAnatomyLabels();
 }
 function isAnatomyVisible(object) {
   for (let current = object; current && current !== anatomyRoot; current = current.parent) {
@@ -372,12 +438,20 @@ function updateStructureInfo(record) {
 }
 function selectStructure(record, { focus = true } = {}) {
   if (!record) return;
-  if (!record.visible) { record.visible = true; record.system.visible = true; buildSystemControls(); applyVisibility(); }
+  const layer = layerForRecord(record);
+  if (!record.visible || !record.system.visible || (layer && !layer.visible)) {
+    record.visible = true;
+    record.system.visible = true;
+    if (layer) layer.visible = true;
+    buildSystemControls();
+    applyVisibility();
+  }
   clearHighlight();
   selectedRecord = record;
   setHighlight(record, true);
   if (isolatedKey) { isolatedKey = record.key; applyIsolation(); }
   updateStructureInfo(record);
+  updateAnatomyLabels();
   if (focus) focusRecord(record);
 }
 function setHighlight(record, enabled) {
@@ -416,10 +490,12 @@ function fitCameraToModel(root) {
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
   controls.target.copy(center);
-  const verticalDistance = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.88);
+  const verticalDistance = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.72);
   const horizontalDistance = size.x / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * camera.aspect * 0.72);
   const distance = Math.max(verticalDistance, horizontalDistance, 1.35);
-  camera.position.set(center.x, center.y + 0.025, center.z + distance);
+  const anteriorThreeQuarter = new THREE.Vector3(0.24, 0, 0.971).normalize();
+  camera.up.set(0, 1, 0);
+  camera.position.copy(center).addScaledVector(anteriorThreeQuarter, distance);
   controls.minDistance = Math.max(0.4, size.y * 0.58);
   controls.maxDistance = Math.max(7, size.y * 5.5);
   controls.update();
@@ -427,11 +503,11 @@ function fitCameraToModel(root) {
 function applyIsolation() {
   for (const system of systems.values()) {
     for (const record of system.structures) {
-      record.root.visible = record.system.visible && record.visible;
+      record.root.visible = isRecordVisible(record);
       for (const mesh of record.meshes) {
         const materials = record.initialMaterials.get(mesh);
         const list = Array.isArray(materials) ? materials : [materials];
-        const fade = record.key !== isolatedKey;
+        const fade = Boolean(isolatedKey) && record.key !== isolatedKey;
         if (fade) {
           const faded = list.map((material) => {
             const copy = material.clone(); copy.transparent = true; copy.opacity = Math.min(material.opacity ?? 1, 0.12); copy.depthWrite = false; return copy;
@@ -455,14 +531,15 @@ function setIsolation(key) {
   applyIsolation();
 }
 function updateAnnotation() {
-  if (!labelsEnabled || !selectedRecord || !isAnatomyVisible(selectedRecord.root)) { annotation.hidden = true; return; }
-  const bounds = selectedRecord.bounds;
+  const record = hoveredRecord || selectedRecord;
+  if (!labelsEnabled || !record || !isAnatomyVisible(record.root) || anatomyLabelNodes.has(record.name)) { annotation.hidden = true; return; }
+  const bounds = record.bounds;
   if (bounds.isEmpty()) { annotation.hidden = true; return; }
-  const point = bounds.getCenter(new THREE.Vector3()).project(camera);
+  const point = bounds.getCenter(annotationProjectionPoint).project(camera);
   if (point.z < -1 || point.z > 1) { annotation.hidden = true; return; }
   const x = (point.x * 0.5 + 0.5) * window.innerWidth;
   const y = (-point.y * 0.5 + 0.5) * window.innerHeight;
-  annotation.textContent = selectedRecord.displayName;
+  annotation.textContent = record.displayName;
   annotation.style.left = `${x + 12}px`;
   annotation.style.top = `${y - 12}px`;
   annotation.hidden = false;
@@ -474,13 +551,16 @@ function buildAnatomyLabels() {
   leaderSvg.replaceChildren();
   anatomyLabelNodes.clear();
   anatomyLeaderLines.clear();
+  anatomyLabelMeshes.length = 0;
   for (const [key, definition] of Object.entries(anatomyLabelDefinitions)) {
-    if (!structures.has(key)) continue;
+    const record = structures.get(key);
+    if (!record) continue;
     const label = document.createElement('button');
     label.className = 'anatomy-label';
     label.type = 'button';
     label.dataset.align = definition.align;
     label.textContent = definition.text;
+    label.setAttribute('aria-label', `Select ${record.displayName}`);
     label.addEventListener('click', () => selectStructure(structures.get(key), { focus: false }));
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.dataset.structure = key;
@@ -488,47 +568,46 @@ function buildAnatomyLabels() {
     container.append(label);
     anatomyLabelNodes.set(key, label);
     anatomyLeaderLines.set(key, line);
+    anatomyLabelMeshes.push(...record.meshes);
   }
   updateAnatomyLabels();
 }
 function updateAnatomyLabels() {
   const container = $('#anatomy-labels');
   container.hidden = !labelsEnabled;
-  if (!labelsEnabled) return;
+  const hoveredLabelRecord = hoveredRecord && anatomyLabelNodes.has(hoveredRecord.name) ? hoveredRecord : null;
+  const selectedLabelRecord = selectedRecord && anatomyLabelNodes.has(selectedRecord.name) ? selectedRecord : null;
+  const activeRecord = hoveredLabelRecord || selectedLabelRecord;
   const width = window.innerWidth;
   const height = window.innerHeight;
-  const pending = [];
   for (const [key, label] of anatomyLabelNodes) {
     const line = anatomyLeaderLines.get(key);
     const record = structures.get(key);
-    if (!record || record === selectedRecord || !isAnatomyVisible(record.root)) { label.hidden = true; line.style.display = 'none'; continue; }
-    const point = record.bounds.getCenter(new THREE.Vector3()).project(camera);
+    if (!labelsEnabled || !record || record !== activeRecord || !isAnatomyVisible(record.root)) {
+      label.hidden = true;
+      line.style.display = 'none';
+      continue;
+    }
+    const point = record.bounds.getCenter(anatomyLabelProjectionPoint).project(camera);
     const x = (point.x * 0.5 + 0.5) * width;
     const y = (-point.y * 0.5 + 0.5) * height;
-    if (point.z < -1 || point.z > 1 || x < 0 || x > width || y < 64 || y > height - 45) { label.hidden = true; line.style.display = 'none'; continue; }
-    pending.push({ key, label, x, y, side: anatomyLabelDefinitions[key].align === 'right' ? -1 : anatomyLabelDefinitions[key].align === 'left' ? 1 : 0, targetY: y + anatomyLabelDefinitions[key].y });
-  }
-  for (const side of [-1, 1, 0]) {
-    const sideLabels = pending.filter((item) => item.side === side).sort((a, b) => a.targetY - b.targetY);
-    let previousY = 56;
-    for (const item of sideLabels) {
-      item.label.hidden = false;
-      const labelHeight = item.label.offsetHeight || 20;
-      const y = Math.max(item.targetY, previousY + (labelHeight + 8) * 0.5);
-      item.yPlaced = Math.min(y, height - 42);
-      previousY = item.yPlaced + (labelHeight + 8) * 0.5;
+    if (point.z < -1 || point.z > 1 || x < 0 || x > width || y < 64 || y > height - 45) {
+      label.hidden = true;
+      line.style.display = 'none';
+      continue;
     }
-    for (const item of sideLabels) {
-      const offset = item.side === 0 ? 28 : 82;
-      const labelX = THREE.MathUtils.clamp(item.x + item.side * offset, 112, width - 112);
-      item.label.style.left = `${labelX}px`;
-      item.label.style.top = `${item.yPlaced}px`;
-      item.label.dataset.align = item.side < 0 ? 'right' : item.side > 0 ? 'left' : 'center';
-      const endX = labelX;
-      line.setAttribute('x1', `${item.x}`); line.setAttribute('y1', `${item.y}`);
-      line.setAttribute('x2', `${endX}`); line.setAttribute('y2', `${item.yPlaced}`);
-      line.style.display = '';
-    }
+    const definition = anatomyLabelDefinitions[key];
+    const labelX = THREE.MathUtils.clamp(x + definition.x, 8, width - 8);
+    const labelY = THREE.MathUtils.clamp(y + definition.y, 72, height - 72);
+    label.dataset.align = definition.align;
+    label.style.left = `${labelX}px`;
+    label.style.top = `${labelY}px`;
+    label.hidden = false;
+    line.setAttribute('x1', `${x}`);
+    line.setAttribute('y1', `${y}`);
+    line.setAttribute('x2', `${labelX}`);
+    line.setAttribute('y2', `${labelY}`);
+    line.style.display = '';
   }
 }
 function showToast(message) {
@@ -536,15 +615,31 @@ function showToast(message) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('visible'), 2100);
 }
 
-function pickAt(event) {
+function pickAt(event, targets = anatomyRoot.children) {
   const rect = canvas.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  return raycaster.intersectObjects(anatomyRoot.children, true).find((hit) => isAnatomyVisible(hit.object) && hit.object.userData.structureKey);
+  return raycaster.intersectObjects(targets, true).find((hit) => isAnatomyVisible(hit.object) && hit.object.userData.structureKey);
 }
 let pointerDown = null;
 canvas.addEventListener('pointerdown', (event) => { if (event.button === 0) pointerDown = { x: event.clientX, y: event.clientY }; });
+canvas.addEventListener('pointermove', (event) => {
+  if (pointerDown || !anatomyLabelMeshes.length) return;
+  const hit = pickAt(event, anatomyLabelMeshes);
+  const next = hit ? structures.get(hit.object.userData.structureKey) : null;
+  if (next === hoveredRecord) return;
+  hoveredRecord = next;
+  updateAnnotation();
+  updateAnatomyLabels();
+});
+canvas.addEventListener('pointerleave', () => {
+  if (!hoveredRecord) return;
+  hoveredRecord = null;
+  updateAnnotation();
+  updateAnatomyLabels();
+});
+canvas.addEventListener('pointercancel', () => { pointerDown = null; });
 canvas.addEventListener('pointerup', (event) => {
   if (!pointerDown) return;
   const wasClick = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y) < 4;
@@ -564,15 +659,23 @@ $('#structure-search').addEventListener('keydown', (event) => {
     if (first) first.click();
   }
 });
-$('#clear-selection').addEventListener('click', () => { clearHighlight(); selectedRecord = null; updateStructureInfo(null); buildStructureBrowser(); });
+$('#clear-selection').addEventListener('click', () => {
+  clearHighlight();
+  selectedRecord = null;
+  updateStructureInfo(null);
+  buildStructureBrowser();
+  updateAnnotation();
+  updateAnatomyLabels();
+});
 $('#reset-layers').addEventListener('click', () => {
   for (const system of systems.values()) { system.visible = true; for (const record of system.structures) record.visible = true; }
+  for (const layer of layerDefinitions) if (layer.available !== false) layer.visible = true;
   if (isolatedKey) { isolatedKey = null; applyIsolation(); }
   applyVisibility(); buildSystemControls(); buildStructureBrowser();
   $('#isolate-state').hidden = true; showToast('All available anatomy layers are visible');
 });
 $('#isolate').addEventListener('click', () => { if (!selectedRecord) return; setIsolation(selectedRecord.key); });
-$('#show-all').addEventListener('click', () => { isolatedKey = null; applyVisibility(); });
+$('#show-all').addEventListener('click', () => { isolatedKey = null; applyIsolation(); });
 $('#opacity-slider').addEventListener('input', (event) => {
   if (!selectedRecord) return;
   const opacity = Number(event.target.value) / 100;
@@ -588,8 +691,8 @@ $('#opacity-slider').addEventListener('input', (event) => {
 });
 
 const viewDirections = {
-  front: { direction: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0), label: 'ANTERIOR' },
-  back: { direction: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0), label: 'POSTERIOR' },
+  front: { direction: new THREE.Vector3(0.24, 0, 0.971).normalize(), up: new THREE.Vector3(0, 1, 0), label: 'ANTERIOR · 3/4' },
+  back: { direction: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0), label: 'POSTERIOR' },
   left: { direction: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0), label: 'LEFT LATERAL' },
   right: { direction: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0), label: 'RIGHT LATERAL' },
   top: { direction: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, -1), label: 'SUPERIOR' },
@@ -609,10 +712,22 @@ $('#reset-camera').addEventListener('click', () => { const scan = structures.get
 $('#labels').addEventListener('click', () => {
   labelsEnabled = !labelsEnabled; $('#labels').classList.toggle('selected', labelsEnabled); updateAnnotation(); updateAnatomyLabels();
 });
+function setInterfaceHidden(hidden) {
+  document.body.classList.toggle('interface-hidden', hidden);
+  const button = $('#interface-toggle');
+  button.textContent = hidden ? 'Show interface' : 'Hide interface';
+  button.setAttribute('aria-pressed', String(hidden));
+  button.title = hidden ? 'Show the viewer controls' : 'Hide the viewer controls';
+}
+$('#interface-toggle').addEventListener('click', () => {
+  setInterfaceHidden(!document.body.classList.contains('interface-hidden'));
+});
 window.addEventListener('keydown', (event) => {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || event.target.isContentEditable) return;
   if (event.key === '/') { event.preventDefault(); $('#structure-search').focus(); }
   if (event.key.toLowerCase() === 'r') $('#reset-camera').click();
+  if (event.key.toLowerCase() === 'h') setInterfaceHidden(!document.body.classList.contains('interface-hidden'));
+  if (event.key === 'Escape' && document.body.classList.contains('interface-hidden')) setInterfaceHidden(false);
   if (event.key === '1') setView('front');
   if (event.key === '2') setView('back');
   if (event.key === '3') setView('left');
@@ -658,9 +773,11 @@ function saveView() {
   const state = {
     camera: camera.position.toArray(), target: controls.target.toArray(), up: camera.up.toArray(),
     systems: Object.fromEntries([...systems].map(([id, system]) => [id, system.visible])),
+    layers: Object.fromEntries(layerDefinitions.filter((layer) => layer.available !== false).map((layer) => [layer.id, layer.visible])),
     structures: Object.fromEntries([...structures].map(([key, record]) => [key, record.visible])),
   };
   localStorage.setItem('mediview-anatomy-view', JSON.stringify(state));
+  $('#restore-view').disabled = false;
   showToast('View saved on this device');
 }
 $('#save-view').addEventListener('click', saveView);
@@ -670,6 +787,10 @@ function restoreView() {
     if (!state) return;
     camera.position.fromArray(state.camera); controls.target.fromArray(state.target); camera.up.fromArray(state.up);
     for (const [id, visible] of Object.entries(state.systems || {})) if (systems.has(id)) systems.get(id).visible = visible;
+    for (const [id, visible] of Object.entries(state.layers || {})) {
+      const layer = layerDefinitions.find((item) => item.id === id && item.available !== false);
+      if (layer) layer.visible = visible;
+    }
     for (const [key, visible] of Object.entries(state.structures || {})) if (structures.has(key)) structures.get(key).visible = visible;
     controls.update(); buildSystemControls(); applyVisibility(); buildStructureBrowser(); showToast('Saved view restored');
   } catch { showToast('Saved view could not be restored'); }
@@ -713,7 +834,7 @@ loadSkeleton().then(() => loadNamedAnatomy()).then(() => {
   $('#restore-view').disabled = !localStorage.getItem('mediview-anatomy-view');
 }).catch((error) => {
   console.error('Anatomy model load failed', error);
-  setLoadText('Some anatomy assets could not be loaded. Check your connection and refresh.', true);
+  setLoadText(`Some anatomy assets could not be loaded: ${error.message || 'check your connection and refresh.'}`, true);
 });
 
 function animate() {

@@ -51,7 +51,7 @@ The graphics algorithms are implemented in C++ independently of OpenGL. OpenGL i
 ### Current 3D visualisation prototype
 
 - Scan based skeleton mesh in the desktop viewer.
-- Stylised organ and vessel shapes in the desktop viewer; supplied named meshes in the browser viewer.
+- Stylised organ and vessel shapes in the desktop viewer; separate organ meshes and generated landmark-based vessels in the browser viewer.
 - Perspective projection and depth testing.
 - Basic OpenGL lighting and colour-based visual layers.
 - Mouse-drag rotation and scroll-wheel zoom.
@@ -73,19 +73,23 @@ in [`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt).
 ### Browser viewer
 
 The `web/` folder contains the browser anatomy studio. It loads the Blender
-skeleton GLB and the named organ and vessel meshes from the companion OBJ/MTL
-export in `assets/anatomy/`. Its browser structure list, system visibility,
-search, selection details, per-structure opacity, isolation, labels, camera
-presets, pan/rotate/zoom, measurement, guided tour, screenshot capture, and
-saved views operate on those supplied meshes. The browser uses the source
-anatomy orientation for its anterior camera and patient-side labels, and
-renders the supplied vessel paths as finer curved branches. Three.js and its
-Draco decoder are loaded from jsDelivr, so the viewer needs an internet
-connection.
+skeleton GLB, named organ meshes from `assets/anatomy/organs.glb`, and uses
+companion OBJ landmarks plus the scan geometry to generate tapered, branched
+arterial and venous paths at runtime. Regenerate the browser organ asset
+from the repository root with
+`blender --background --python scripts/generate_web_organs.py`; the script
+exports separate named meshes in the OBJ's metre-scale, Y-up coordinate frame.
+These authored shapes are educational visualizations, not clinical
+segmentations. The browser structure list, system visibility, search,
+selection details, per-structure opacity, isolation, labels, camera presets,
+pan/rotate/zoom, measurement, guided tour, screenshot capture, and saved views
+operate on those structures. Three.js and its Draco decoder are loaded from
+jsDelivr, so the viewer needs an internet connection.
 
 The supplied assets cover the scan skeleton, heart, lungs, liver, stomach,
-kidneys, bladder, and named major vessel paths. The supplied Blender scan is a
-single joined object, so its individual bones cannot be selected separately.
+kidneys, and bladder; the browser vessel paths are generated from the OBJ's
+named skeleton landmarks. The supplied Blender scan is a single joined object,
+so its individual bones cannot be selected separately.
 Muscle, nervous, reproductive, and other systems without supplied meshes are
 not shown as available layers.
 
@@ -190,7 +194,7 @@ The current work is a prototype rather than a complete anatomy platform. We stil
 
 ## Known limitations and issues
 
-- The desktop anatomy remains a schematic visualization. The browser viewer uses the supplied scan and named organ/vessel meshes, which are educational assets rather than clinically validated models.
+- The desktop anatomy remains a schematic visualization. The browser viewer uses the supplied scan and organ meshes plus generated landmark-based vessel paths; these are educational assets rather than clinically validated models.
 - The browser supports selecting supplied structures and viewing concise educational descriptions. The joined skeleton scan does not provide individually selectable bones.
 - Muscle, nervous, reproductive and other systems without supplied meshes are not included. The project does not yet include animation sequences or a 3D cross-section workflow.
 - The desktop renderer uses the OpenGL compatibility profile and immediate-mode drawing; a modern shader-based desktop rendering pipeline remains future work.
