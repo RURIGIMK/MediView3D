@@ -56,8 +56,8 @@ mesh_object["anatomy_system"] = "Skeleton"
 mesh_object["source"] = "Provided MediView3D Blender anatomy scene"
 mesh_object["source_face_count"] = len(SOURCE.data.polygons)
 
-# Export only the optimized scan object; named organs and vessels are loaded
-# from their separately named companion OBJ/MTL export by the web viewer.
+# Export only the optimized scan object; organs use the authored GLB and the
+# companion OBJ supplies landmark objects for browser-generated vessel paths.
 bpy.ops.object.select_all(action="DESELECT")
 mesh_object.select_set(True)
 bpy.context.view_layer.objects.active = mesh_object

@@ -18,15 +18,19 @@
     <header class="topbar">
       <a class="brand" href="#" aria-label="MediView home"><span class="brand-mark">M</span><span><strong>MEDIVIEW <i>3D</i></strong><small>ANATOMY STUDIO</small></span></a>
       <div class="top-context"><span class="live-dot"></span><span>INTERACTIVE MODEL</span><span class="context-divider"></span><span class="model-name">FULL BODY · ANTERIOR</span></div>
-      <div class="header-actions"><button id="restore-view" class="header-button" title="Restore the saved view">Load view</button><button id="save-view" class="header-button primary" title="Save this view">Save view</button></div>
+      <div class="header-actions"><button id="interface-toggle" class="header-button interface-toggle" type="button" aria-pressed="false" title="Hide or show the viewer controls">Hide interface</button><button id="restore-view" class="header-button" title="Restore the saved view"><span class="button-full">Load view</span><span class="button-compact">Load</span></button><button id="save-view" class="header-button primary" title="Save this view"><span class="button-full">Save view</span><span class="button-compact">Save</span></button></div>
     </header>
 
     <aside class="panel anatomy-panel">
       <div class="panel-heading"><div><p class="eyebrow">MODEL EXPLORER</p><h1>Anatomy</h1></div><span id="structure-count" class="count">—</span></div>
-      <label class="search-box"><span>⌕</span><input id="structure-search" type="search" placeholder="Search anatomy" autocomplete="off" /><kbd>/</kbd></label>
-      <div class="system-title"><span>ANATOMICAL SYSTEMS</span><button id="reset-layers" class="text-button">Reset</button></div>
-      <div id="system-list" class="system-list" aria-label="Anatomical system visibility"></div>
-      <p class="interaction-hint">Drag to rotate · right-drag to pan · scroll to zoom</p>
+      <label class="search-box"><span aria-hidden="true">⌕</span><input id="structure-search" type="search" placeholder="Search anatomy" autocomplete="off" aria-label="Search anatomical structures" /><kbd>/</kbd></label>
+      <div class="system-title"><span>ANATOMY LAYERS</span><button id="reset-layers" class="text-button">Reset</button></div>
+      <div id="layer-list" class="layer-list" aria-label="Anatomy layer visibility"></div>
+      <details class="system-details">
+        <summary><span>ANATOMICAL SYSTEMS</span><span class="system-details-hint">Advanced</span></summary>
+        <div id="system-list" class="system-list" aria-label="Anatomical system visibility"></div>
+      </details>
+      <p class="interaction-hint">Drag to rotate · right-drag to pan · scroll to zoom · H hides controls</p>
       <div class="browser-heading"><span>STRUCTURES</span><span id="visible-count">Loading model</span></div>
       <div id="structure-list" class="structure-list" aria-label="Anatomical structure browser"></div>
       <div id="load-state" class="load-state"><span class="spinner"></span><span>Preparing anatomical model…</span></div>
@@ -58,7 +62,7 @@
 
     <div class="action-toolbar panel">
       <button id="measure" class="tool-button" title="Measure distance between two points">⌁ <span>Measure</span></button>
-      <button id="labels" class="tool-button selected" title="Toggle structure labels">Aa <span>Labels</span></button>
+      <button id="labels" class="tool-button selected" title="Show labels for selected or hovered structures">Aa <span>Labels</span></button>
       <span class="toolbar-separator"></span>
       <button id="guided-tour" class="tool-button tour-button">▷ <span>Guided tour</span></button>
       <button id="screenshot" class="tool-button" title="Save a screenshot">▧ <span>Capture</span></button>
