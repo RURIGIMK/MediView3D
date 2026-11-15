@@ -237,5 +237,93 @@ int main() {
         require(twoPoint.size() == 3 && same(twoPoint.front(), {0,0}) && same(twoPoint.back(), {2,4}), "two-point spline endpoint interpolation failed");
     });
 
+    suite.run("Bresenham pixel count matches the major axis for arbitrary lines", [] {
+        const int lines[][4] = {{0,0,7,3},{-5,2,1,-9},{3,3,-8,4},{10,-4,10,6},{-6,-6,6,6}};
+        for (const auto& l : lines) {
+            const auto line = bresenhamLine(l[0], l[1], l[2], l[3]);
+            const auto major = static_cast<std::size_t>(std::max(std::abs(l[2] - l[0]), std::abs(l[3] - l[1])));
+            verifyLine(line, {double(l[0]), double(l[1])}, {double(l[2]), double(l[3])}, major + 1, "Bresenham major axis");
+        }
+    });
+
+    suite.run("Midpoint circle points lie on the radius and reach the extremes", [] {
+        const int cx = -4, cy = 7, r = 9;
+        const auto circle = midpointCircle(cx, cy, r);
+        const auto pixels = asSet(circle);
+        for (const auto p : circle) {
+            const double dist = std::hypot(p.x - cx, p.y - cy);
+            require(std::abs(dist - r) < 1.0, "circle point is more than one pixel away from the radius");
+            const int dx = static_cast<int>(p.x) - cx;
+            const int dy = static_cast<int>(p.y) - cy;
+            require(pixels.count({cx + dy, cy + dx}), "circle is missing diagonal (x/y swap) symmetry");
+        }
+        require(pixels.count({cx + r, cy}) && pixels.count({cx - r, cy}) &&
+                pixels.count({cx, cy + r}) && pixels.count({cx, cy - r}),
+                "circle does not reach all four axis extremes");
+    });
+
+    suite.run("Midpoint ellipse stays inside its bounding box and reaches the extremes", [] {
+        const int cx = 5, cy = -3, rx = 8, ry = 4;
+        const auto ellipse = midpointEllipse(cx, cy, rx, ry);
+        const auto pixels = asSet(ellipse);
+        for (const auto p : ellipse) {
+            require(p.x >= cx - rx && p.x <= cx + rx && p.y >= cy - ry && p.y <= cy + ry,
+                    "ellipse point lies outside its bounding box");
+        }
+        require(pixels.count({cx + rx, cy}) && pixels.count({cx - rx, cy}) &&
+                pixels.count({cx, cy + ry}) && pixels.count({cx, cy - ry}),
+                "ellipse does not reach all four axis extremes");
+        require(midpointEllipse(0, 0, -1, 3).empty() && midpointEllipse(0, 0, 3, -1).empty(),
+                "negative-axis ellipse should be empty");
+    });
+
+    suite.run("Polygon clipping a triangle that crosses one window edge", [] {
+        const Rect r{0, 0, 10, 10};
+        const auto result = clipPolygon({{5,5},{15,5},{5,8}}, r);
+        const Point2D expected[] = {{5,5},{10,5},{10,6.5},{5,8}};
+        requireEqual(result.size(), static_cast<std::size_t>(4), "edge-crossing triangle vertex count");
+        for (const auto want : expected) {
+            require(std::any_of(result.begin(), result.end(), [&](Point2D got){ return same(got, want); }),
+                    "edge-crossing triangle is missing an expected vertex");
+        }
+        verifyInside(result, r);
+        require(clipPolygon({}, r).empty(), "empty polygon should stay empty after clipping");
+    });
+
+    suite.run("Scanline fill stays inside a triangle and ignores degenerate input", [] {
+        const auto fill = scanlineFillPoints({{0,0},{6,0},{0,6}});
+        require(!fill.empty(), "triangle fill is empty");
+        for (const auto p : fill) {
+            require(p.x >= 0 && p.y >= 0 && p.x + p.y <= 6 + kEpsilon, "fill point lies outside the triangle");
+        }
+        require(scanlineFillPoints({}).empty(), "empty polygon should produce no fill");
+        require(scanlineFillPoints({{0,0},{4,4}}).empty(), "two-vertex polygon should produce no fill");
+    });
+
+    suite.run("Bezier default sampling, convex hull, and collinear controls", [] {
+        const Point2D p0{0,0}, p1{2,6}, p2{7,-3}, p3{9,4};
+        const auto curve = bezierCurve(p0, p1, p2, p3);
+        requireEqual(curve.size(), static_cast<std::size_t>(81), "default Bezier sample count");
+        for (const auto p : curve) {
+            require(p.x >= 0 - kEpsilon && p.x <= 9 + kEpsilon && p.y >= -3 - kEpsilon && p.y <= 6 + kEpsilon,
+                    "Bezier point escapes the control-point bounding box");
+        }
+        for (const auto p : bezierCurve({0,2},{3,2},{6,2},{9,2}, 10)) {
+            require(near(p.y, 2.0), "collinear control points should produce a straight line");
+        }
+    });
+
+    suite.run("Catmull-Rom passes through every control point", [] {
+        const std::vector<Point2D> controls{{0,0},{3,4},{6,1},{9,5},{12,0}};
+        const int n = 5;
+        const auto spline = catmullRomSpline(controls, n);
+        requireEqual(spline.size(), static_cast<std::size_t>((controls.size() - 1) * n + 1), "multi-segment spline point count");
+        for (std::size_t i = 0; i < controls.size(); ++i) {
+            require(same(spline[i * n], controls[i]), "spline does not pass through a control point");
+        }
+        requireEqual(catmullRomSpline(controls).size(), static_cast<std::size_t>((controls.size() - 1) * 20 + 1),
+                     "default spline sample count");
+    });
+
     return suite.summary();
 }
