@@ -9,6 +9,7 @@ import { buildVesselStructures, vesselStructureNames } from './vessels.js';
 import { organStructureNames, placeOrganStructures } from './organs.js';
 import { registerReferenceToScan } from './registration.js';
 import { loadMuscleStructures, muscleStructureNames } from './muscles.js';
+import { loadNerveStructures, nerveStructureNames } from './nerves.js';
 
 const $ = (selector) => document.querySelector(selector);
 const canvas = $('#viewer');
@@ -71,7 +72,7 @@ const layerDefinitions = [
   { id: 'organs', label: 'Organs', color: '#cf7a82', visible: true, matches: (record) => organStructureNames.has(record.name) },
   { id: 'vessels', label: 'Vessels', color: '#e96773', visible: true, matches: (record) => vesselStructureNames.has(record.name) },
   { id: 'muscles', label: 'Muscles', color: '#a65b50', visible: false, loaded: false, loading: false, opacity: 1, matches: (record) => muscleStructureNames.has(record.name) },
-  { id: 'nerves', label: 'Nerves', color: '#7d8b98', available: false },
+  { id: 'nerves', label: 'Nerves', color: '#d3bd68', visible: false, loaded: false, loading: false, matches: (record) => nerveStructureNames.has(record.name) },
 ];
 const anatomyLabelNodes = new Map();
 const anatomyLeaderLines = new Map();
@@ -85,6 +86,7 @@ const categoryDefinitions = [
   { id: 'endocrine', label: 'Endocrine', color: '#d3a56e' },
   { id: 'lymphatic', label: 'Lymphatic', color: '#b67e9a' },
   { id: 'muscular', label: 'Muscular', color: '#a65b50' },
+  { id: 'nervous', label: 'Nervous', color: '#d3bd68' },
 ];
 const categoryById = Object.fromEntries(categoryDefinitions.map((category) => [category.id, category]));
 const structureMeta = {
@@ -107,6 +109,17 @@ const structureMeta = {
   Trachea: { category: 'respiratory', location: 'Midline neck and upper thorax, anterior to the esophagus.', function: 'Conducts air between the larynx and the bronchi.', description: 'An adapted Z-Anatomy trachea mesh.' },
   Bronchi: { category: 'respiratory', location: 'Thorax, branching from the trachea toward both lungs.', function: 'Conducts air into the right and left lungs.', description: 'Joined main and lobar bronchus meshes from Z-Anatomy.' },
   Esophagus: { category: 'digestive', location: 'Posterior to the trachea, extending through the thorax.', function: 'Moves swallowed food and liquid toward the stomach.', description: 'An adapted Z-Anatomy esophagus mesh.' },
+  Brain: { category: 'nervous', location: 'Cranial cavity.', function: 'Integrates sensory input and coordinates movement, cognition, and vital functions.', description: 'Grouped cerebral and brainstem structures adapted from the Z-Anatomy nervous system.' },
+  Spinal_Cord: { category: 'nervous', location: 'Vertebral canal, from the brainstem into the upper lumbar region.', function: 'Relays signals between the brain and body and coordinates spinal reflexes.', description: 'Grouped spinal-cord gray and white matter structures from Z-Anatomy.' },
+  Cranial_Nerves: { category: 'nervous', location: 'Base of the brain, extending through the head and neck.', function: 'Carry sensory and motor signals between the brain and the head, neck, and organs.', description: 'Joined major cranial nerve structures from the Z-Anatomy source.' },
+  Brachial_Plexus_L: { category: 'nervous', location: 'Left lower neck, shoulder, and upper limb.', function: 'Carries motor and sensory signals between the spinal cord and the left upper limb.', description: 'Grouped left brachial plexus roots, trunks, cords, and major branches.' },
+  Brachial_Plexus_R: { category: 'nervous', location: 'Right lower neck, shoulder, and upper limb.', function: 'Carries motor and sensory signals between the spinal cord and the right upper limb.', description: 'Grouped right brachial plexus roots, trunks, cords, and major branches.' },
+  Lumbar_Plexus_L: { category: 'nervous', location: 'Left posterior abdominal wall.', function: 'Supplies nerves to the left lower abdominal wall and anterior thigh.', description: 'Grouped left lumbar plexus structures from the Z-Anatomy source.' },
+  Lumbar_Plexus_R: { category: 'nervous', location: 'Right posterior abdominal wall.', function: 'Supplies nerves to the right lower abdominal wall and anterior thigh.', description: 'Grouped right lumbar plexus structures from the Z-Anatomy source.' },
+  Sacral_Plexus_L: { category: 'nervous', location: 'Left posterior pelvis.', function: 'Forms major nerves supplying the left pelvis and lower limb.', description: 'Grouped left sacral plexus structures, excluding the separately selectable sciatic nerve.' },
+  Sacral_Plexus_R: { category: 'nervous', location: 'Right posterior pelvis.', function: 'Forms major nerves supplying the right pelvis and lower limb.', description: 'Grouped right sacral plexus structures, excluding the separately selectable sciatic nerve.' },
+  Sciatic_Nerve_L: { category: 'nervous', location: 'Left posterior pelvis and thigh, continuing toward the lower leg.', function: 'Provides major motor and sensory pathways to the left lower limb.', description: 'Grouped left sciatic nerve and its major tibial and common fibular continuations.' },
+  Sciatic_Nerve_R: { category: 'nervous', location: 'Right posterior pelvis and thigh, continuing toward the lower leg.', function: 'Provides major motor and sensory pathways to the right lower limb.', description: 'Grouped right sciatic nerve and its major tibial and common fibular continuations.' },
   Aorta_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Carries oxygenated blood from the heart to the systemic circulation.', description: 'A landmark-driven educational path through the thorax and abdomen.' },
   VenaCava_Central: { category: 'cardiovascular', location: 'Central thorax and abdomen.', function: 'Returns systemic venous blood toward the heart.', description: 'A landmark-driven educational return path through the abdomen and thorax.' },
   Carotid_L: { category: 'cardiovascular', location: 'Left side of the neck.', function: 'Supplies arterial blood toward the head and neck.', description: 'A simplified carotid path generated from the skeleton landmarks.' },
@@ -158,6 +171,12 @@ const displayNames = {
   Vein_Arm_L: 'Left arm vein', Vein_Arm_R: 'Right arm vein',
   Artery_Leg_L: 'Left leg artery', Artery_Leg_R: 'Right leg artery',
   Vein_Leg_L: 'Left leg vein', Vein_Leg_R: 'Right leg vein',
+  Cranial_Nerves: 'Cranial nerves',
+  Brachial_Plexus_L: 'Left brachial plexus', Brachial_Plexus_R: 'Right brachial plexus',
+  Lumbar_Plexus_L: 'Left lumbar plexus', Lumbar_Plexus_R: 'Right lumbar plexus',
+  Sacral_Plexus_L: 'Left sacral plexus', Sacral_Plexus_R: 'Right sacral plexus',
+  Sciatic_Nerve_L: 'Left sciatic nerve', Sciatic_Nerve_R: 'Right sciatic nerve',
+  Spinal_Cord: 'Spinal cord',
 };
 const muscleDisplayGroups = {
   Neck: 'neck muscles', Pectorals: 'pectorals', Deltoids: 'deltoids',
@@ -178,9 +197,12 @@ for (const system of systems.values()) {
 
 const structures = new Map();
 const muscleLayer = layerDefinitions.find((layer) => layer.id === 'muscles');
+const nerveLayer = layerDefinitions.find((layer) => layer.id === 'nerves');
 let anatomyReady = false;
 let muscleLoadPromise = null;
+let nerveLoadPromise = null;
 let currentRegistration = null;
+let skullReferenceBounds = null;
 let selectedRecord = null;
 let hoveredRecord = null;
 let cameraFraming = 'torso';
@@ -245,6 +267,12 @@ function setLoadText(message, error = false) {
   loadState.classList.toggle('error', error);
   loadState.innerHTML = error ? `<span>${message}</span>` : `<span class="spinner"></span><span>${message}</span>`;
 }
+function setLoadedLayerText() {
+  const loadedLayers = [muscleLayer, nerveLayer].filter((layer) => layer.loaded).map((layer) => layer.label.toLowerCase());
+  const layerText = loadedLayers.length ? ` · ${loadedLayers.join(' and ')} loaded` : '';
+  const rms = currentRegistration ? Math.round(currentRegistration.rmsError * 1000) : 0;
+  setLoadText(`${structures.size} structures${layerText} · landmark fit RMS ${rms} mm · Artec scan CC BY 3.0`);
+}
 function installSkeleton(gltf) {
   const root = gltf.scene;
   root.name = 'Human skeleton';
@@ -302,6 +330,9 @@ function loadNamedAnatomy() {
     });
     Promise.all([loadObj, loadOrgans]).then(([root, organs]) => {
       root.updateMatrixWorld(true);
+      const skullReference = root.getObjectByName('Skull_Cranium');
+      if (!skullReference) throw new Error('The anatomy reference is missing the Skull_Cranium landmark.');
+      skullReferenceBounds = new THREE.Box3().setFromObject(skullReference);
       const scanRoot = structures.get('Human skeleton')?.root;
       if (!scanRoot) throw new Error('The skeleton scan must load before its anatomy landmarks can be registered.');
       const registration = registerReferenceToScan(root, scanRoot);
@@ -347,12 +378,12 @@ function loadMuscleLayer() {
     muscleLayer.loaded = true;
     muscleLayer.loading = false;
     $('#muscle-opacity-control').hidden = false;
+    buildLayerControls();
     buildSystemControls();
     buildStructureBrowser();
     updateStructureCount();
     applyVisibility();
-    const rms = currentRegistration ? Math.round(currentRegistration.rmsError * 1000) : 0;
-    setLoadText(`${structures.size} structures · muscles loaded · landmark fit RMS ${rms} mm · Artec scan CC BY 3.0`);
+    setLoadedLayerText();
     return roots;
   }).catch((error) => {
     muscleLoadPromise = null;
@@ -364,6 +395,43 @@ function loadMuscleLayer() {
     throw error;
   });
   return muscleLoadPromise;
+}
+
+function loadNerveLayer() {
+  if (nerveLoadPromise) return nerveLoadPromise;
+  nerveLoadPromise = loadNerveStructures().then((roots) => {
+    const brain = roots.find((root) => root.name === 'Brain');
+    if (!brain || !skullReferenceBounds) throw new Error('The brain cannot be registered without the skull landmark.');
+    const brainBounds = new THREE.Box3().setFromObject(brain);
+    brain.position.add(skullReferenceBounds.getCenter(new THREE.Vector3()).sub(brainBounds.getCenter(new THREE.Vector3())));
+    brain.updateMatrix();
+    brain.updateMatrixWorld(true);
+    for (const root of roots) recordFromObject(root.name, root, 'nervous');
+    nerveLayer.loaded = true;
+    nerveLayer.loading = false;
+    buildLayerControls();
+    buildSystemControls();
+    buildStructureBrowser();
+    updateStructureCount();
+    applyVisibility();
+    setLoadedLayerText();
+    return roots;
+  }).catch((error) => {
+    nerveLoadPromise = null;
+    nerveLayer.loading = false;
+    nerveLayer.visible = false;
+    buildLayerControls();
+    console.error('Nerve model load failed', error);
+    setLoadText(`Nerve layer could not be loaded: ${error.message || 'check the asset and refresh.'}`, true);
+    throw error;
+  });
+  return nerveLoadPromise;
+}
+
+function loadLazyLayer(layer) {
+  if (layer.id === 'muscles') return loadMuscleLayer();
+  if (layer.id === 'nerves') return loadNerveLayer();
+  return Promise.resolve([]);
 }
 
 function updateStructureCount() {
@@ -394,7 +462,7 @@ function buildLayerControls() {
       button.title = `${layer.label} models are coming soon`;
       button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>Coming soon</small></span>`;
     } else {
-      const waitingForAnatomy = layer.id === 'muscles' && !anatomyReady;
+      const waitingForAnatomy = ['muscles', 'nerves'].includes(layer.id) && !anatomyReady;
       const waitingForModel = layer.loading || waitingForAnatomy;
       button.disabled = waitingForModel;
       button.setAttribute('aria-pressed', String(layer.visible));
@@ -403,12 +471,12 @@ function buildLayerControls() {
       const status = layer.loading ? 'Loading…' : waitingForAnatomy ? 'Preparing…' : layer.visible ? 'Shown' : 'Hidden';
       button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>${status}</small></span>`;
       button.addEventListener('click', () => {
-        if (layer.id === 'muscles' && !layer.loaded) {
+        if (['muscles', 'nerves'].includes(layer.id) && !layer.loaded) {
           layer.visible = true;
           layer.loading = true;
-          setLoadText('Loading the muscle layer…');
+          setLoadText(`Loading the ${layer.label.toLowerCase()} layer…`);
           buildLayerControls();
-          loadMuscleLayer().catch(() => {});
+          loadLazyLayer(layer).catch(() => {});
           return;
         }
         layer.visible = !layer.visible;
@@ -761,11 +829,12 @@ $('#reset-layers').addEventListener('click', () => {
   for (const layer of layerDefinitions) if (layer.available !== false) layer.visible = true;
   if (isolatedKey) { isolatedKey = null; applyIsolation(); }
   applyVisibility(); buildSystemControls(); buildStructureBrowser();
-  if (!muscleLayer.loaded && anatomyReady) {
-    muscleLayer.loading = true;
-    setLoadText('Loading the muscle layer…');
+  const pendingLayers = [muscleLayer, nerveLayer].filter((layer) => !layer.loaded && anatomyReady);
+  if (pendingLayers.length) {
+    for (const layer of pendingLayers) layer.loading = true;
+    setLoadText(`Loading ${pendingLayers.map((layer) => layer.label.toLowerCase()).join(' and ')} layers…`);
     buildLayerControls();
-    loadMuscleLayer().catch(() => {});
+    for (const layer of pendingLayers) loadLazyLayer(layer).catch(() => {});
   }
   $('#isolate-state').hidden = true; showToast('All available anatomy layers are visible');
 });
@@ -913,11 +982,12 @@ function restoreView() {
     }
     for (const [key, visible] of Object.entries(state.structures || {})) if (structures.has(key)) structures.get(key).visible = visible;
     controls.update(); buildSystemControls(); applyVisibility(); buildStructureBrowser();
-    if (muscleLayer.visible && !muscleLayer.loaded && anatomyReady) {
-      muscleLayer.loading = true;
-      setLoadText('Loading the saved muscle layer…');
+    const pendingLayers = [muscleLayer, nerveLayer].filter((layer) => layer.visible && !layer.loaded && anatomyReady);
+    if (pendingLayers.length) {
+      for (const layer of pendingLayers) layer.loading = true;
+      setLoadText(`Loading the saved ${pendingLayers.map((layer) => layer.label.toLowerCase()).join(' and ')} layers…`);
       buildLayerControls();
-      loadMuscleLayer().catch(() => {});
+      for (const layer of pendingLayers) loadLazyLayer(layer).catch(() => {});
     }
     showToast('Saved view restored');
   } catch { showToast('Saved view could not be restored'); }
@@ -928,19 +998,21 @@ const guidedKeys = [
   'Heart', 'Lung_L', 'Trachea', 'Liver', 'Stomach', 'Pancreas',
   'Small_Intestine', 'Large_Intestine', 'Spleen', 'Kidney_L', 'Bladder',
   ...muscleStructureNames,
+  ...nerveStructureNames,
   'VenaCava_Central', 'Human skeleton',
 ];
 const tourCard = $('#tour-card');
 function showTourStop() {
   const key = guidedKeys[tourIndex]; const record = structures.get(key);
-  if (!record && muscleStructureNames.has(key) && anatomyReady) {
-    muscleLayer.visible = true;
-    muscleLayer.loading = true;
+  const layer = [muscleLayer, nerveLayer].find((candidate) => candidate.matches({ name: key }));
+  if (!record && layer && anatomyReady) {
+    layer.visible = true;
+    layer.loading = true;
     buildLayerControls();
-    $('#tour-title').textContent = 'Muscle layer';
+    $('#tour-title').textContent = `${layer.label} layer`;
     $('#tour-progress').textContent = 'Loading structures for the guided tour…';
     tourCard.hidden = false;
-    loadMuscleLayer().then(showTourStop).catch(() => {});
+    loadLazyLayer(layer).then(showTourStop).catch(() => {});
     return;
   }
   if (!record) { if (tourIndex < guidedKeys.length - 1) { tourIndex++; showTourStop(); } else finishTour(); return; }

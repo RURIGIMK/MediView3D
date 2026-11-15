@@ -81,7 +81,10 @@ meshes. Its 28-group Z-Anatomy muscle layer is off by default and lazy-loads
 from `assets/anatomy/muscles.glb`. The viewer registers the named reference
 bones to scan surface landmarks, then places organs inside measured rib-cage,
 spinal, and pelvic regions. The Z-Anatomy-derived small-intestine asset
-includes the duodenum and jejunum; an ileum mesh is not included.
+includes the duodenum and jejunum; an ileum mesh is not included. The
+11-group Z-Anatomy nerve layer includes the brain, spinal cord, cranial nerves,
+and major paired plexus and sciatic pathways; it is also off by default and
+lazy-loads from `assets/anatomy/nerves.glb`.
 
 The browser structure list, system visibility, search, selection details,
 per-structure opacity, isolation, labels, camera presets, pan/rotate/zoom,
@@ -99,7 +102,11 @@ is a single joined object, so individual bones cannot be selected separately.
 Regenerate `assets/anatomy/muscles.glb` with
 `blender --background --python scripts/export_z_anatomy_muscles.py`; it reads
 the ignored `MuscularSystem100.fbx` and caps the grouped asset at 400,000
-triangles. The nervous layer is not yet available.
+triangles. Regenerate `assets/anatomy/nerves.glb` with
+`blender --background --python scripts/export_z_anatomy_nerves.py`; it reads
+the ignored `NervousSystem100.fbx` and uses the same triangle cap. Source URLs,
+filenames, and CC BY-SA 4.0 attribution are listed in
+[`docs/ATTRIBUTION.md`](docs/ATTRIBUTION.md).
 
 To host it on Render, create a Blueprint from this repository and select the
 `kyle-3d-skeleton-render` branch. The root [`render.yaml`](render.yaml)
@@ -204,7 +211,7 @@ The current work is a prototype rather than a complete anatomy platform. We stil
 
 - The desktop anatomy remains a schematic visualization. The browser viewer uses the supplied scan and organ meshes plus generated landmark-based vessel paths; these are educational assets rather than clinically validated models.
 - The browser supports selecting supplied structures and viewing concise educational descriptions. The joined skeleton scan does not provide individually selectable bones.
-- Nervous, reproductive and other systems without supplied meshes are not included. The project does not yet include animation sequences or a 3D cross-section workflow.
+- Reproductive and other systems without supplied meshes are not included. The project does not yet include animation sequences or a 3D cross-section workflow.
 - The desktop renderer uses the OpenGL compatibility profile and immediate-mode drawing; a modern shader-based desktop rendering pipeline remains future work.
 - The scanline fill algorithm is intended for simple polygons and does not handle holes or self-intersecting polygons.
 - GUI support and OpenGL drivers vary by operating system. The desktop window requires a working graphical display.
