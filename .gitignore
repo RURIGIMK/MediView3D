@@ -10,6 +10,3 @@
 *.dylib
 evidence/z-anatomy/*.fbx
 .DS_Store
-.claude/
-CLAUDE.md
-CLAUDE.local.md
