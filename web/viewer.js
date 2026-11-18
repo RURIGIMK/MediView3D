@@ -288,8 +288,10 @@ function installSkeleton(gltf) {
     object.userData.structureKey = 'Human skeleton';
   });
   recordFromObject('Human skeleton', root, 'skeleton', root);
-  cameraFraming = 'torso';
+  cameraFraming = 'full';
   fitCameraToSkeleton(root, camera, controls, cameraFraming);
+  $('.model-name').textContent = 'FULL BODY · ANTERIOR · 3/4';
+  document.querySelectorAll('.view-button').forEach((button) => button.classList.toggle('active', button.dataset.view === 'full-body'));
   buildSystemControls();
   buildStructureBrowser();
   updateStructureCount();
@@ -890,12 +892,7 @@ function setView(name) {
 }
 document.querySelectorAll('.view-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
 $('#reset-camera').addEventListener('click', () => {
-  const scan = structures.get('Human skeleton');
-  if (scan) {
-    cameraFraming = 'torso';
-    fitCameraToSkeleton(scan.root, camera, controls, cameraFraming);
-  }
-  setView('front');
+  setView('full-body');
 });
 $('#labels').addEventListener('click', () => {
   labelsEnabled = !labelsEnabled; $('#labels').classList.toggle('selected', labelsEnabled); updateAnnotation(); updateAnatomyLabels();
@@ -1037,6 +1034,10 @@ $('#system-list').addEventListener('dblclick', (event) => {
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  if (cameraFraming === 'full') {
+    const scan = structures.get('Human skeleton');
+    if (scan) fitCameraToSkeleton(scan.root, camera, controls, 'full');
+  }
 });
 controls.addEventListener('change', updateAnnotation);
 

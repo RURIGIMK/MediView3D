@@ -39,8 +39,9 @@ profiles; the organ layer no longer uses whole-body bounding-box registration.
 The source reference retains negative Z for anterior and negative X for the
 patient's left. Labels and metadata use the patient's perspective.
 
-The initial camera frames the head through pelvis at a three-quarter angle;
-choose **Full body** to fit the complete scan. A PMREM RoomEnvironment and soft
+The initial camera fits the complete skeleton at a three-quarter angle, and
+resizes refit that full-body framing. **Reset view** returns to the complete
+skeleton. A PMREM RoomEnvironment and soft
 key, fill, and rim lights shade the ivory bones. The scene uses a navy-indigo
 gradient with no grid or fog. Organ labels appear only for a hovered or
 selected structure, with leader lines. Vessel paths remain simplified and are
