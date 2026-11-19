@@ -27,8 +27,10 @@ the corresponding exporters in `scripts/`.
 Changes made for MediView3D: selected structures were grouped into separately
 selectable organs, left/right muscle groups, and major nervous-system
 structures; mirrored to match the viewer's patient-left/right convention;
-centered or landmark-registered to the Artec scan; recolored with PBR
-materials; decimated; and exported as Draco-compressed glTF. The
+recolored with PBR materials; decimated; and exported as Draco-compressed
+glTF. The browser places organs from measured scan landmarks, and maps the
+muscle and nerve exports from the shared Z-Anatomy standing frame using a
+uniform scale, rotation, and translation. The
 small-intestine group contains the available duodenum and jejunum meshes; no
 ileum mesh is included in this source subset. The muscle export contains 28
 named groups; the nerve export contains 11 named groups. Both layer assets are
@@ -39,7 +41,8 @@ CC BY-SA 4.0 or a compatible license.
 
 ## Artec skeleton scan
 
-The viewer continues to use the supplied scan-based skeleton asset. Its
-original source and CC BY 3.0 attribution are recorded in
-[`assets/skeleton/ATTRIBUTION.txt`](../assets/skeleton/ATTRIBUTION.txt); this
-organ update does not modify that asset.
+The browser and desktop viewer use the prepared scan-based skeleton asset.
+Its original source and CC BY 3.0 attribution are recorded in
+[`assets/skeleton/ATTRIBUTION.txt`](../assets/skeleton/ATTRIBUTION.txt). The
+web GLB is exported from the already-prepared PLY, preserving its documented
+straightening and display-stand removal.

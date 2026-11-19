@@ -56,17 +56,16 @@ function finiteSize(width, height, depth) {
   );
 }
 
-function scaleToPlacement(sourceSize, targetSize) {
-  const scale = new THREE.Vector3();
-  for (const axis of ['x', 'y', 'z']) {
+function uniformScaleToPlacement(sourceSize, targetSize) {
+  const ratios = ['x', 'y', 'z'].map((axis) => {
     const source = sourceSize[axis];
     const target = targetSize[axis];
     if (!Number.isFinite(source) || source <= 0 || !Number.isFinite(target) || target <= 0) {
       throw new Error('An organ or its measured placement volume has invalid dimensions.');
     }
-    scale[axis] = (target / source) * 0.96;
-  }
-  return scale;
+    return target / source;
+  }).sort((a, b) => a - b);
+  return ratios[1] * 0.96;
 }
 
 function createPlacements(referenceRoot, registration, scanDepthProfile) {
@@ -194,7 +193,7 @@ export function placeOrganStructures(gltf, referenceRoot, registration) {
     const sourceBounds = new THREE.Box3().setFromObject(root);
     const sourceSize = sizeOf(sourceBounds);
     root.position.copy(placement.center);
-    root.scale.copy(scaleToPlacement(sourceSize, placement.size));
+    root.scale.setScalar(uniformScaleToPlacement(sourceSize, placement.size));
     root.updateMatrix();
     root.updateMatrixWorld(true);
 
@@ -214,7 +213,7 @@ export function placeOrganStructures(gltf, referenceRoot, registration) {
       object.userData.structureKey = root.name;
     });
     root.userData.structureKey = root.name;
-    root.userData.landmarkRegistered = true;
+    root.userData.coordinateFrame = 'measured bone landmarks and scan cavity depth';
     placed.push(root.name);
   }
 

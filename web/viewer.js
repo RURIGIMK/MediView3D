@@ -7,7 +7,7 @@ import { setupLighting } from './lighting.js';
 import { createBoneMaterial, fitCameraToSkeleton } from './skeleton.js';
 import { buildVesselStructures, vesselStructureNames } from './vessels.js';
 import { organStructureNames, placeOrganStructures } from './organs.js';
-import { registerReferenceToScan } from './registration.js';
+import { registerReferenceToScan, registerZAnatomyFrameToScan } from './registration.js';
 import { loadMuscleStructures, muscleStructureNames } from './muscles.js';
 import { loadNerveStructures, nerveStructureNames } from './nerves.js';
 
@@ -31,6 +31,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.02;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
 
 const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.05, 50);
 camera.position.set(0, 0.05, 3.65);
@@ -46,6 +47,8 @@ controls.update();
 setupLighting(renderer, scene);
 
 const anatomyRoot = new THREE.Group();
+const anatomyCutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+let cutawayEnabled = false;
 scene.add(anatomyRoot);
 const namedAnatomyRoot = new THREE.Group();
 namedAnatomyRoot.name = 'Registered anatomy layers';
@@ -68,11 +71,11 @@ const anatomyLabelDefinitions = {
   Esophagus: { text: 'ESOPHAGUS', x: 58, y: 17, align: 'left' },
 };
 const layerDefinitions = [
-  { id: 'skeleton', label: 'Skeleton', color: '#cbd5df', visible: true, matches: (record) => record.name === 'Human skeleton' },
-  { id: 'organs', label: 'Organs', color: '#cf7a82', visible: true, matches: (record) => organStructureNames.has(record.name) },
-  { id: 'vessels', label: 'Vessels', color: '#e96773', visible: true, matches: (record) => vesselStructureNames.has(record.name) },
-  { id: 'muscles', label: 'Muscles', color: '#a65b50', visible: false, loaded: false, loading: false, opacity: 1, matches: (record) => muscleStructureNames.has(record.name) },
-  { id: 'nerves', label: 'Nerves', color: '#d3bd68', visible: false, loaded: false, loading: false, matches: (record) => nerveStructureNames.has(record.name) },
+  { id: 'skeleton', label: 'Skeleton', color: '#cbd5df', visible: true, loaded: false, failed: false, matches: (record) => record.name === 'Human skeleton' },
+  { id: 'organs', label: 'Organs', color: '#cf7a82', visible: true, loaded: false, failed: false, matches: (record) => organStructureNames.has(record.name) },
+  { id: 'vessels', label: 'Vessels', color: '#e96773', visible: true, loaded: false, failed: false, matches: (record) => vesselStructureNames.has(record.name) },
+  { id: 'muscles', label: 'Muscles', color: '#a65b50', visible: false, loaded: false, loading: false, failed: false, opacity: 1, matches: (record) => muscleStructureNames.has(record.name) },
+  { id: 'nerves', label: 'Nerves', color: '#d3bd68', visible: false, loaded: false, loading: false, failed: false, matches: (record) => nerveStructureNames.has(record.name) },
 ];
 const anatomyLabelNodes = new Map();
 const anatomyLeaderLines = new Map();
@@ -202,7 +205,7 @@ let anatomyReady = false;
 let muscleLoadPromise = null;
 let nerveLoadPromise = null;
 let currentRegistration = null;
-let skullReferenceBounds = null;
+let atlasFrameRegistration = null;
 let selectedRecord = null;
 let hoveredRecord = null;
 let cameraFraming = 'torso';
@@ -244,6 +247,11 @@ function recordFromObject(name, object, category, root = object) {
   const metadata = metadataFor(name);
   const system = systems.get(category || metadata.category);
   if (!system) return null;
+  const recordCategory = category || metadata.category;
+  const renderOrder = recordCategory === 'muscular'
+    ? 5
+    : muscleLayer.opacity < 0.999 && recordCategory !== 'skeleton' ? 6
+      : ({ skeleton: 1, cardiovascular: 2, respiratory: 3, digestive: 3, urinary: 3, endocrine: 3, lymphatic: 3, nervous: 4 }[recordCategory] ?? 3);
   const record = { key: name, name, displayName: friendlyName(name), system, root, meshes: [], visible: true, opacity: 1, initialMaterials: new Map(), opacityMaterials: new Map(), bounds: new THREE.Box3() };
   root.userData.structureKey = name;
   root.traverse((child) => {
@@ -252,6 +260,11 @@ function recordFromObject(name, object, category, root = object) {
     child.userData.structureKey = name;
     child.castShadow = true;
     child.receiveShadow = true;
+    child.renderOrder = renderOrder;
+    if (cutawayEnabled) {
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) if (material) material.clippingPlanes = [anatomyCutPlane];
+    }
     record.meshes.push(child);
     record.initialMaterials.set(child, child.material);
   });
@@ -263,15 +276,37 @@ function recordFromObject(name, object, category, root = object) {
   return record;
 }
 
+function applySharedAtlasFrame(roots, matrix) {
+  for (const root of roots) {
+    if (root.matrixAutoUpdate) root.updateMatrix();
+    root.matrix.premultiply(matrix);
+    root.matrixAutoUpdate = false;
+    root.matrixWorldNeedsUpdate = true;
+    root.userData.coordinateFrame = 'Z-Anatomy shared anatomical frame';
+    root.updateMatrixWorld(true);
+  }
+}
+
 function setLoadText(message, error = false) {
   loadState.classList.toggle('error', error);
-  loadState.innerHTML = error ? `<span>${message}</span>` : `<span class="spinner"></span><span>${message}</span>`;
+  loadState.classList.toggle('loading', !error && /^(loading|preparing)/i.test(message));
+  loadState.replaceChildren();
+  if (!error && /^(loading|preparing)/i.test(message)) {
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    loadState.append(spinner);
+  }
+  const text = document.createElement('span');
+  text.textContent = message;
+  loadState.append(text);
 }
 function setLoadedLayerText() {
-  const loadedLayers = [muscleLayer, nerveLayer].filter((layer) => layer.loaded).map((layer) => layer.label.toLowerCase());
-  const layerText = loadedLayers.length ? ` · ${loadedLayers.join(' and ')} loaded` : '';
+  updateStatusCounts();
   const rms = currentRegistration ? Math.round(currentRegistration.rmsError * 1000) : 0;
-  setLoadText(`${structures.size} structures${layerText} · landmark fit RMS ${rms} mm · Artec scan CC BY 3.0`);
+  const max = currentRegistration ? Math.round(currentRegistration.maxError * 1000) : 0;
+  const atlasRms = atlasFrameRegistration ? Math.round(atlasFrameRegistration.rmsError * 1000) : 0;
+  const atlasMax = atlasFrameRegistration ? Math.round(atlasFrameRegistration.maxError * 1000) : 0;
+  setLoadText(`Loaded: ${structures.size}/${EXPECTED_STRUCTURE_COUNT} · Visible: ${visibleStructureCount()} · Failed: ${failedLayerCount()} · Reference RMS ${rms}, max ${max} mm · Z-Anatomy RMS ${atlasRms}, max ${atlasMax} mm · Artec scan CC BY 3.0`);
 }
 function installSkeleton(gltf) {
   const root = gltf.scene;
@@ -288,6 +323,7 @@ function installSkeleton(gltf) {
     object.userData.structureKey = 'Human skeleton';
   });
   recordFromObject('Human skeleton', root, 'skeleton', root);
+  layerDefinitions.find((layer) => layer.id === 'skeleton').loaded = true;
   cameraFraming = 'full';
   fitCameraToSkeleton(root, camera, controls, cameraFraming);
   $('.model-name').textContent = 'FULL BODY · ANTERIOR · 3/4';
@@ -300,7 +336,7 @@ function installSkeleton(gltf) {
 function loadSkeleton() {
   return new Promise((resolve, reject) => {
     const draco = new DRACOLoader();
-    draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+    draco.setDecoderPath('/web/vendor/three/examples/jsm/libs/draco/');
     const loader = new GLTFLoader();
     loader.setDRACOLoader(draco);
     loader.load('/assets/anatomy/skeleton_scan.glb', (gltf) => {
@@ -316,7 +352,7 @@ function loadNamedAnatomy() {
   return new Promise((resolve, reject) => {
     const loader = new OBJLoader();
     const organDraco = new DRACOLoader();
-    organDraco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+    organDraco.setDecoderPath('/web/vendor/three/examples/jsm/libs/draco/');
     const organLoader = new GLTFLoader();
     organLoader.setDRACOLoader(organDraco);
     const loadObj = new Promise((loadResolve, loadReject) => {
@@ -330,14 +366,16 @@ function loadNamedAnatomy() {
         (error) => { organDraco.dispose(); loadReject(error); },
       );
     });
-    Promise.all([loadObj, loadOrgans]).then(([root, organs]) => {
+    Promise.all([loadObj, loadOrgans, loadMuscleStructures()]).then(([root, organs, muscleRoots]) => {
       root.updateMatrixWorld(true);
       const skullReference = root.getObjectByName('Skull_Cranium');
       if (!skullReference) throw new Error('The anatomy reference is missing the Skull_Cranium landmark.');
-      skullReferenceBounds = new THREE.Box3().setFromObject(skullReference);
       const scanRoot = structures.get('Human skeleton')?.root;
       if (!scanRoot) throw new Error('The skeleton scan must load before its anatomy landmarks can be registered.');
       const registration = registerReferenceToScan(root, scanRoot);
+      atlasFrameRegistration = registerZAnatomyFrameToScan(muscleRoots, scanRoot, registration);
+      const atlasLocalMatrix = registration.matrix.clone().invert().multiply(atlasFrameRegistration.matrix);
+      applySharedAtlasFrame(muscleRoots, atlasLocalMatrix);
       namedAnatomyRoot.matrixAutoUpdate = false;
       namedAnatomyRoot.matrix.copy(registration.matrix);
       anatomyRoot.updateMatrixWorld(true);
@@ -362,12 +400,15 @@ function loadNamedAnatomy() {
         structures,
         register: (name, vesselRoot) => recordFromObject(name, vesselRoot, 'cardiovascular'),
       });
+      layerDefinitions.find((layer) => layer.id === 'organs').loaded = true;
+      layerDefinitions.find((layer) => layer.id === 'vessels').loaded = true;
       buildSystemControls();
       buildStructureBrowser();
       updateStructureCount();
       buildAnatomyLabels();
       currentRegistration = registration;
       anatomyReady = true;
+      setLoadedLayerText();
       resolve(registration);
     }).catch(reject);
   });
@@ -376,8 +417,12 @@ function loadNamedAnatomy() {
 function loadMuscleLayer() {
   if (muscleLoadPromise) return muscleLoadPromise;
   muscleLoadPromise = loadMuscleStructures().then((roots) => {
-    for (const root of roots) recordFromObject(root.name, root, 'muscular');
+    for (const root of roots) {
+      const record = recordFromObject(root.name, root, 'muscular');
+      if (record) applyRecordOpacity(record);
+    }
     muscleLayer.loaded = true;
+    muscleLayer.failed = false;
     muscleLayer.loading = false;
     $('#muscle-opacity-control').hidden = false;
     buildLayerControls();
@@ -394,6 +439,7 @@ function loadMuscleLayer() {
     buildLayerControls();
     console.error('Muscle model load failed', error);
     setLoadText(`Muscle layer could not be loaded: ${error.message || 'check the asset and refresh.'}`, true);
+    updateStatusCounts();
     throw error;
   });
   return muscleLoadPromise;
@@ -402,14 +448,13 @@ function loadMuscleLayer() {
 function loadNerveLayer() {
   if (nerveLoadPromise) return nerveLoadPromise;
   nerveLoadPromise = loadNerveStructures().then((roots) => {
-    const brain = roots.find((root) => root.name === 'Brain');
-    if (!brain || !skullReferenceBounds) throw new Error('The brain cannot be registered without the skull landmark.');
-    const brainBounds = new THREE.Box3().setFromObject(brain);
-    brain.position.add(skullReferenceBounds.getCenter(new THREE.Vector3()).sub(brainBounds.getCenter(new THREE.Vector3())));
-    brain.updateMatrix();
-    brain.updateMatrixWorld(true);
+    if (!atlasFrameRegistration) throw new Error('The nerves cannot use a Z-Anatomy frame before registration.');
+    const referenceMatrix = currentRegistration?.matrix;
+    if (!referenceMatrix) throw new Error('The registered skeleton reference is not ready for nerve placement.');
+    applySharedAtlasFrame(roots, referenceMatrix.clone().invert().multiply(atlasFrameRegistration.matrix));
     for (const root of roots) recordFromObject(root.name, root, 'nervous');
     nerveLayer.loaded = true;
+    nerveLayer.failed = false;
     nerveLayer.loading = false;
     buildLayerControls();
     buildSystemControls();
@@ -425,6 +470,7 @@ function loadNerveLayer() {
     buildLayerControls();
     console.error('Nerve model load failed', error);
     setLoadText(`Nerve layer could not be loaded: ${error.message || 'check the asset and refresh.'}`, true);
+    updateStatusCounts();
     throw error;
   });
   return nerveLoadPromise;
@@ -441,6 +487,23 @@ function updateStructureCount() {
   const count = structures.size;
   $('#structure-count').textContent = String(count).padStart(2, '0');
   $('#visible-count').textContent = `${availableSystems.length} systems`;
+}
+const EXPECTED_STRUCTURE_COUNT = 1 + organStructureNames.size + vesselStructureNames.size + muscleStructureNames.size + nerveStructureNames.size;
+function visibleStructureCount() {
+  return [...structures.values()].filter(isRecordVisible).length;
+}
+function failedLayerCount() {
+  return layerDefinitions.filter((layer) => layer.failed).length;
+}
+function updateStatusCounts() {
+  if (!loadState || !structures.size) return;
+  const count = structures.size;
+  const rms = currentRegistration ? Math.round(currentRegistration.rmsError * 1000) : 0;
+  const max = currentRegistration ? Math.round(currentRegistration.maxError * 1000) : 0;
+  const atlasRms = atlasFrameRegistration ? Math.round(atlasFrameRegistration.rmsError * 1000) : 0;
+  const atlasMax = atlasFrameRegistration ? Math.round(atlasFrameRegistration.maxError * 1000) : 0;
+  const status = `Loaded: ${count}/${EXPECTED_STRUCTURE_COUNT} · Visible: ${visibleStructureCount()} · Failed: ${failedLayerCount()} · Reference RMS ${rms}, max ${max} mm · Z-Anatomy RMS ${atlasRms}, max ${atlasMax} mm · Artec scan CC BY 3.0`;
+  if (anatomyReady && !muscleLayer.loading && !nerveLayer.loading) setLoadText(status);
 }
 function layerForRecord(record) {
   return layerDefinitions.find((layer) => layer.matches?.(record));
@@ -470,7 +533,7 @@ function buildLayerControls() {
       button.setAttribute('aria-pressed', String(layer.visible));
       button.setAttribute('aria-busy', String(layer.loading));
       button.title = waitingForAnatomy ? 'Preparing the anatomy reference' : `${layer.visible ? 'Hide' : 'Show'} ${layer.label}`;
-      const status = layer.loading ? 'Loading…' : waitingForAnatomy ? 'Preparing…' : layer.visible ? 'Shown' : 'Hidden';
+      const status = layer.failed ? 'Failed to load' : layer.loading ? 'Loading…' : waitingForAnatomy ? 'Preparing…' : layer.loaded ? layer.visible ? 'Loaded · shown' : 'Loaded · hidden' : layer.visible ? 'Shown' : 'Hidden';
       button.innerHTML = `<i class="layer-indicator" aria-hidden="true"></i><span class="layer-copy"><span>${layer.label}</span><small>${status}</small></span>`;
       button.addEventListener('click', () => {
         if (['muscles', 'nerves'].includes(layer.id) && !layer.loaded) {
@@ -554,6 +617,7 @@ function applyVisibility() {
   if (isolatedKey) applyIsolation();
   updateAnnotation();
   updateAnatomyLabels();
+  updateStatusCounts();
 }
 function isAnatomyVisible(object) {
   for (let current = object; current && current !== anatomyRoot; current = current.parent) {
@@ -826,7 +890,21 @@ $('#clear-selection').addEventListener('click', () => {
   updateAnnotation();
   updateAnatomyLabels();
 });
+for (const [id, panelSelector, label] of [
+  ['explorer-collapse', '.anatomy-panel', 'model explorer'],
+  ['details-collapse', '.info-panel', 'structure details'],
+]) {
+  $(`#${id}`).addEventListener('click', () => {
+    const panel = $(panelSelector);
+    const collapsed = panel.classList.toggle('panel-collapsed');
+    $(`#${id}`).setAttribute('aria-expanded', String(!collapsed));
+    $(`#${id}`).setAttribute('aria-label', `${collapsed ? 'Expand' : 'Collapse'} ${label}`);
+    updateAnnotation();
+  });
+}
 $('#reset-layers').addEventListener('click', () => {
+  $('#anatomy-mode').value = 'custom';
+  setMuscleLayerOpacity(1);
   for (const system of systems.values()) { system.visible = true; for (const record of system.structures) record.visible = true; }
   for (const layer of layerDefinitions) if (layer.available !== false) layer.visible = true;
   if (isolatedKey) { isolatedKey = null; applyIsolation(); }
@@ -839,6 +917,77 @@ $('#reset-layers').addEventListener('click', () => {
     for (const layer of pendingLayers) loadLazyLayer(layer).catch(() => {});
   }
   $('#isolate-state').hidden = true; showToast('All available anatomy layers are visible');
+});
+$('#cutaway').addEventListener('click', () => {
+  cutawayEnabled = !cutawayEnabled;
+  scene.traverse((object) => {
+    if (!object.isMesh) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      if (!material) continue;
+      material.clippingPlanes = cutawayEnabled ? [anatomyCutPlane] : [];
+      material.clipShadows = cutawayEnabled;
+      material.needsUpdate = true;
+    }
+  });
+  $('#cutaway').classList.toggle('selected', cutawayEnabled);
+  $('#cutaway').setAttribute('aria-pressed', String(cutawayEnabled));
+});
+const modeLayerSets = {
+  complete: ['skeleton', 'organs', 'vessels', 'muscles', 'nerves'],
+  muscular: ['muscles'],
+  skeletal: ['skeleton'],
+  organs: ['organs'],
+  nervous: ['nerves'],
+  cardiovascular: ['vessels'],
+  'transparent-muscle': ['skeleton', 'organs', 'vessels', 'muscles'],
+  deep: ['skeleton', 'organs', 'vessels', 'muscles', 'nerves'],
+};
+function setMuscleLayerOpacity(opacity) {
+  muscleLayer.opacity = opacity;
+  const percent = Math.round(opacity * 100);
+  $('#muscle-opacity-slider').value = String(percent);
+  $('#muscle-opacity-value').textContent = `${percent}%`;
+  for (const record of structures.values()) {
+    if (!muscleStructureNames.has(record.name)) continue;
+    const highlighted = record === selectedRecord;
+    if (highlighted) setHighlight(record, false);
+    applyRecordOpacity(record);
+    if (highlighted) setHighlight(record, true);
+  }
+  for (const record of structures.values()) {
+    if (muscleStructureNames.has(record.name) || record.system.id === 'skeleton') continue;
+    for (const mesh of record.meshes) mesh.renderOrder = opacity < 0.999 ? 6 : ({ cardiovascular: 2, nervous: 4 }[record.system.id] ?? 3);
+  }
+}
+function setAnatomyMode(mode) {
+  const visibleLayers = modeLayerSets[mode];
+  if (!visibleLayers) return;
+  for (const layer of layerDefinitions) layer.visible = visibleLayers.includes(layer.id);
+  setMuscleLayerOpacity(mode === 'muscular' ? 1 : mode === 'complete' ? 0.4 : mode === 'transparent-muscle' ? 0.32 : mode === 'deep' ? 0.2 : muscleLayer.opacity);
+  if (isolatedKey) { isolatedKey = null; applyIsolation(); $('#isolate-state').hidden = true; }
+  applyVisibility();
+  buildLayerControls();
+  buildSystemControls();
+  buildStructureBrowser();
+  const pending = [muscleLayer, nerveLayer].filter((layer) => layer.visible && !layer.loaded && !layer.loading && anatomyReady);
+  if (pending.length) {
+    for (const layer of pending) layer.loading = true;
+    setLoadText(`Loading ${pending.map((layer) => layer.label.toLowerCase()).join(' and ')} layers…`);
+    buildLayerControls();
+    for (const layer of pending) loadLazyLayer(layer).catch(() => {});
+  }
+  const note = $('#mode-note');
+  note.hidden = false;
+  note.textContent = mode === 'deep'
+    ? 'Deep view shows available muscles and internal structures. No skin mesh or separate superficial muscle layer is included.'
+    : mode === 'transparent-muscle'
+      ? 'Muscles use a fixed translucent material with depth writing disabled so organs remain visible.'
+      : 'No skin mesh is included. Muscles are grouped without separate superficial and deep layers.';
+}
+$('#anatomy-mode').addEventListener('change', (event) => setAnatomyMode(event.target.value));
+$('#layer-list').addEventListener('click', (event) => {
+  if (event.target.closest('[data-layer]')) $('#anatomy-mode').value = 'custom';
 });
 $('#isolate').addEventListener('click', () => { if (!selectedRecord) return; setIsolation(selectedRecord.key); });
 $('#show-all').addEventListener('click', () => { isolatedKey = null; applyIsolation(); });
@@ -853,16 +1002,7 @@ $('#opacity-slider').addEventListener('input', (event) => {
   setHighlight(record, true);
 });
 $('#muscle-opacity-slider').addEventListener('input', (event) => {
-  const opacity = Number(event.target.value) / 100;
-  muscleLayer.opacity = opacity;
-  $('#muscle-opacity-value').textContent = `${event.target.value}%`;
-  for (const record of structures.values()) {
-    if (!muscleStructureNames.has(record.name)) continue;
-    const highlighted = record === selectedRecord;
-    if (highlighted) setHighlight(record, false);
-    applyRecordOpacity(record);
-    if (highlighted) setHighlight(record, true);
-  }
+  setMuscleLayerOpacity(Number(event.target.value) / 100);
 });
 
 const viewDirections = {
@@ -1041,13 +1181,85 @@ window.addEventListener('resize', () => {
 });
 controls.addEventListener('change', updateAnnotation);
 
+if (new URLSearchParams(window.location.search).has('qa')) {
+  window.__mediviewQA = {
+    snapshot() {
+      anatomyRoot.updateMatrixWorld(true);
+      return {
+        registration: currentRegistration ? {
+          rmsMm: currentRegistration.rmsError * 1000,
+          maxMm: currentRegistration.maxError * 1000,
+          landmarks: currentRegistration.landmarks.map((landmark) => ({ ...landmark, errorMm: landmark.error * 1000 })),
+          matrix: currentRegistration.matrix.elements,
+        } : null,
+        atlasFrame: atlasFrameRegistration ? { scale: atlasFrameRegistration.scale, rmsMm: atlasFrameRegistration.rmsError * 1000, maxMm: atlasFrameRegistration.maxError * 1000, landmarks: atlasFrameRegistration.landmarks, method: atlasFrameRegistration.method, matrix: atlasFrameRegistration.matrix.elements } : null,
+        camera: { position: camera.position.toArray(), target: controls.target.toArray() },
+        status: loadState.textContent,
+        layers: layerDefinitions.map(({ id, loaded, loading, failed, visible, opacity }) => ({ id, loaded, loading, failed, visible, opacity })),
+        structures: [...structures.values()].map((record) => {
+          const bounds = new THREE.Box3().setFromObject(record.root);
+          const material = record.meshes[0]?.material;
+          return { name: record.name, centroid: bounds.getCenter(new THREE.Vector3()).toArray(), min: bounds.min.toArray(), max: bounds.max.toArray(), visible: isRecordVisible(record), loaded: true, material: material ? { opacity: material.opacity, transparent: material.transparent, depthWrite: material.depthWrite, renderOrder: record.meshes[0].renderOrder } : null };
+        }),
+      };
+    },
+    setMode(mode) {
+      $('#anatomy-mode').value = mode;
+      setAnatomyMode(mode);
+    },
+    setLayer(id, visible) {
+      const layer = layerDefinitions.find((item) => item.id === id);
+      if (!layer) throw new Error(`Unknown anatomy layer: ${id}`);
+      layer.visible = visible;
+      if (visible && ['muscles', 'nerves'].includes(id) && !layer.loaded && !layer.loading && anatomyReady) {
+        layer.loading = true;
+        loadLazyLayer(layer).catch(() => {});
+      }
+      applyVisibility();
+      buildLayerControls();
+      buildStructureBrowser();
+    },
+    select(name, focus = true) {
+      const record = structures.get(name);
+      if (!record) throw new Error(`Structure is not loaded: ${name}`);
+      selectStructure(record, { focus });
+    },
+    frameStructure(name, distance = 1.5) {
+      const record = structures.get(name);
+      if (!record) throw new Error(`Structure is not loaded: ${name}`);
+      const center = new THREE.Box3().setFromObject(record.root).getCenter(new THREE.Vector3());
+      controls.target.copy(center);
+      camera.position.set(center.x, center.y, center.z + distance);
+      controls.update();
+    },
+    zoomOut(factor = 1.6) {
+      const direction = camera.position.clone().sub(controls.target).normalize();
+      const distance = camera.position.distanceTo(controls.target) * factor;
+      camera.position.copy(controls.target).addScaledVector(direction, distance);
+      controls.update();
+    },
+    clearHighlight() {
+      clearHighlight();
+      updateAnatomyLabels();
+    },
+    setStructureOpacity(name, opacity) {
+      const record = structures.get(name);
+      if (!record) throw new Error(`Structure is not loaded: ${name}`);
+      record.opacity = THREE.MathUtils.clamp(opacity, 0.15, 1);
+      applyRecordOpacity(record);
+    },
+  };
+}
+
 setLoadText('Loading high detail scan mesh…');
-loadSkeleton().then(() => loadNamedAnatomy()).then((registration) => {
-  setLoadText(`${structures.size} structures · landmark fit RMS ${Math.round(registration.rmsError * 1000)} mm · Artec scan CC BY 3.0`);
+loadSkeleton().then(() => loadNamedAnatomy()).then(() => {
+  setLoadedLayerText();
+  setAnatomyMode('complete');
   updateStructureCount(); buildSystemControls(); buildStructureBrowser();
   buildAnatomyLabels();
   $('#restore-view').disabled = !localStorage.getItem('mediview-anatomy-view');
 }).catch((error) => {
+  for (const layer of layerDefinitions.filter((item) => !item.loaded)) layer.failed = true;
   console.error('Anatomy model load failed', error);
   setLoadText(`Some anatomy assets could not be loaded: ${error.message || 'check your connection and refresh.'}`, true);
 });

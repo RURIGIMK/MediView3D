@@ -63,17 +63,17 @@ The organ and vessel structures are educational models, not clinically validated
 ### Skeleton rendering asset
 
 The desktop viewer renders the prepared scan-based skeleton mesh at
-`assets/skeleton/skeleton_prepared.ply`. The web viewer uses a Draco-compressed
-glTF export of the supplied Blender scan at `assets/anatomy/skeleton_scan.glb`.
-The Blender source has one joined skeleton mesh and no source materials; the
-web export recenters and scales the scan to metres, decimates it for browser
-rendering, and applies a neutral bone material. Source and license details are
-in [`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt).
+`assets/skeleton/skeleton_prepared.ply`. The web viewer exports this same
+straightened scan, with its display rod removed, to
+`assets/anatomy/skeleton_scan.glb`. The prepared mesh measures 0.3590 × 1.7130
+× 0.2252 m. Source and license details are in
+[`assets/skeleton/ATTRIBUTION.txt`](assets/skeleton/ATTRIBUTION.txt).
 
 ### Browser viewer
 
-The `web/` folder contains the browser anatomy studio. It loads the Blender
-skeleton GLB, named organ meshes from `assets/anatomy/organs.glb`, and uses
+The `web/` folder contains the browser anatomy studio. It loads a GLB exported
+from the prepared scan-based skeleton, named organ meshes from
+`assets/anatomy/organs.glb`, and uses
 companion OBJ landmarks plus the scan geometry to generate tapered, branched
 arterial and venous paths at runtime. Its heart, lobed lungs, digestive organs,
 kidneys, adrenal glands, spleen, trachea, and bronchi use adapted Z-Anatomy
@@ -88,9 +88,11 @@ lazy-loads from `assets/anatomy/nerves.glb`.
 
 The browser structure list, system visibility, search, selection details,
 per-structure opacity, isolation, labels, camera presets, pan/rotate/zoom,
-measurement, guided tour, screenshot capture, and saved views operate on the
-named structures. Three.js and its Draco decoder are loaded from jsDelivr, so
-the viewer needs an internet connection.
+measurement, guided tour, screenshot capture, saved views, view modes, and
+cutaway operate on the named structures. Three.js 0.160.0 and its Draco
+decoder are vendored under `web/vendor/three/` so anatomy assets render
+without a CDN connection. Registration and asset limits are documented in
+[`docs/WEB_VIEWER.md`](docs/WEB_VIEWER.md).
 
 Regenerate `assets/anatomy/organs.glb` with
 `blender --background --python scripts/export_z_anatomy_organs.py`. The
@@ -114,7 +116,10 @@ publishes the static viewer and copies its anatomy assets into the web output.
 To host it on Vercel, import the repository with the root directory set to `./`;
 [`vercel.json`](vercel.json) prepares the same static assets. After connecting
 either host to the branch, pushes to that branch trigger a new web deployment.
-The existing C++ desktop application remains a separate target.
+The existing C++ desktop application remains a separate target. Browser
+acceptance screenshots, responsive checks, and centroid comparisons can be
+captured with `python scripts/capture_web_acceptance.py`; see
+[`docs/WEB_VIEWER.md`](docs/WEB_VIEWER.md).
 
 ## How to compile and run
 

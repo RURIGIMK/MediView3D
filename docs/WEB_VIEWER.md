@@ -1,157 +1,134 @@
 # MediView 3D Browser Anatomy Studio
 
-The browser viewer is in `web/`. It uses the supplied Blender scene for the
-scan based skeleton and the accompanying named OBJ/MTL export for individual
-organs and vessel paths. The desktop C++ application remains separate.
+The browser viewer is in `web/`. It uses the prepared Artec scan, named
+Z-Anatomy organ, muscle, and nerve assets, and an OBJ reference for bone
+landmarks and generated vessel paths. The desktop C++ application remains
+separate.
 
-## Available structures
+## Available structures and limits
 
-- Skeleton scan: one joined mesh from the supplied `.blend` file.
-- Cardiovascular: heart, central aorta and vena cava, carotid paths, and named
-  limb artery and vein paths.
-- Respiratory: left and right lungs with lobes, trachea, and main/lobar bronchi.
-- Digestive: liver, gallbladder, stomach, pancreas, esophagus, small intestine,
-  and large intestine.
-- Urinary: left and right kidneys, adrenal glands, and bladder.
-- Lymphatic: spleen.
-- Nervous: brain, spinal cord, cranial nerves, and left/right brachial, lumbar,
-  sacral, and sciatic nerve groups.
+- One joined scan-based skeleton mesh. Individual scan bones are not selectable.
+- Eighteen named organ groups: heart, left/right lungs, liver, gallbladder,
+  stomach, pancreas, spleen, left/right kidneys and adrenal glands, bladder,
+  small and large intestines, trachea, bronchi, and esophagus.
+- Twelve simplified, generated artery and vein groups. These are teaching
+  paths, not a complete vascular segmentation.
+- Twenty-eight selectable left/right muscle groups.
+- Eleven nerve groups: brain, spinal cord, cranial nerves, paired brachial,
+  lumbar, and sacral plexuses, and paired sciatic nerves.
 
-Only systems represented in the supplied assets are listed. The joined scan
-does not contain independently selectable bone objects. Small-intestine data
-includes the duodenum and jejunum; the source set does not include an ileum
-mesh. The muscle layer has 28 selectable left/right groups and loads on first
-use. The 11-group nerve layer is off by default and loads when first enabled.
-These models are educational adaptations, not clinical segmentations.
+The small-intestine source subset includes duodenum and jejunum, not ileum.
+The nerve subset does not contain femoral nerves. There is no skin mesh or
+separate superficial/deep muscle asset. These models are educational
+adaptations, not clinical segmentations.
 
-`assets/anatomy/muscles.glb` contains named neck, pectoral, deltoid, arm,
-forearm, abdominal, back, gluteal, thigh, and calf groups. The layer is off by
-default and includes an independent layer-opacity control; each group also
-supports individual visibility, selection, details, and opacity.
+## Registration measurements
 
-Organs in `assets/anatomy/organs.glb` are adapted from Z-Anatomy CC BY-SA 4.0
-meshes and exported as named Draco-compressed structures. Their left/right
-convention is corrected for the viewer. Registration fits the named OBJ
-reference bones to scan surface samples at the skull, clavicles, sternum,
-pelvis, knees, and lower legs. Organ scale and placement are then measured from
-the registered ribs, sternum, thoracic vertebrae, pelvis, and scan front/back
-profiles; the organ layer no longer uses whole-body bounding-box registration.
-The source reference retains negative Z for anterior and negative X for the
-patient's left. Labels and metadata use the patient's perspective.
+The browser skeleton is exported from `assets/skeleton/skeleton_prepared.ply`,
+the already straightened scan with the display rod removed. Its measured bounds
+are 0.3590 × 1.7130 × 0.2252 m.
 
-The initial camera fits the complete skeleton at a three-quarter angle, and
-resizes refit that full-body framing. **Reset view** returns to the complete
-skeleton. A PMREM RoomEnvironment and soft
-key, fill, and rim lights shade the ivory bones. The scene uses a navy-indigo
-gradient with no grid or fog. Organ labels appear only for a hovered or
-selected structure, with leader lines. Vessel paths remain simplified and are
-not a complete vascular segmentation; they are outside the organ asset export.
+The OBJ reference bones are registered to sampled scan vertices with one
+similarity transform: uniform scale, rotation, and translation. A robust
+median/MAD filter rejects inconsistent landmarks. The accepted fit is **19.6
+mm RMS, 25.1 mm maximum**. The pelvis and both clavicles are outliers and are
+excluded from those error values.
 
-## Controls
+Organs are positioned and sized from the registered rib cage, sternum,
+vertebral and pelvic landmarks, and scan depth measurements. Muscles and
+nerves share a measured Z-Anatomy Y-up frame, aligned using its documented
+1.78 m standing height, the scan's 1.713 m height, and the registered scan
+orientation. This uses one uniform scale; no axis-specific scaling or arm
+bending is applied.
 
-- Drag with the left mouse button to orbit; right drag or Shift + left drag to
-  pan; scroll to zoom.
-- Use Full body, Front, Back, Left, Right, Top, and Bottom controls for standard
-  views; `5` selects the full-body framing.
-- Search or select an item in the structure browser, or click a mesh in the
-  scene, to view its name, system, location, function, and description.
-- Toggle system chips or the eye icon beside an individual structure. Right
-  click a system chip to isolate that system.
-- Use the opacity slider or **Isolate structure** in the information panel.
-- **Measure** records the distance between two clicked points in centimetres.
-- Major organs show a leader-line label on hover or selection. **Labels**
-  toggles annotations.
-  **Guided tour** visits
-  supplied structures. **Capture** downloads a PNG screenshot.
-- **Save view** stores camera and visibility settings in the current browser;
-  **Load view** restores them on that device.
+The source forearm muscles reach about ±0.33 m while the scan arms stay within
+about ±0.18 m. The arm silhouette mismatch remains and needs a matching source
+asset. The lumbar plexus source groups also differ in vertical extent; the
+viewer preserves their source geometry instead of mirroring them. These
+limitations remain visible in the model and are not presented as corrected.
+
+## Modes and controls
+
+The view selector provides Complete, Muscular, Skeletal, Internal organs,
+Nervous, Cardiovascular, Transparent muscle, and Deep anatomy modes. Skin is
+marked unavailable because the project has no skin asset. Transparent muscle
+uses alpha blending with depth writes disabled so internal structures remain
+inspectable. The optional **Cutaway** control enables an anterior clipping
+plane. Layer changes do not refit or move the camera. The camera fits the full
+skeleton initially and on resize; **Reset view** restores that framing.
+
+- Drag to orbit; right-drag or Shift + left-drag to pan; scroll to zoom.
+- Use Full body, Front, Back, Left, Right, Top, and Bottom camera presets.
+- Search or select a structure to view its details; click a visible mesh to
+  select it.
+- Toggle a layer, system, or individual structure; right-click a system chip
+  to isolate that system.
+- Adjust structure opacity or isolate a selected structure.
+- **Measure** records a distance in centimetres. **Labels** toggles labels.
+- **Guided tour** visits supplied structures. **Capture** saves a PNG.
+- **Save view** and **Load view** store visibility and camera state locally.
 - Keyboard shortcuts: `/` focuses search, `R` resets the camera, `1`–`4`
   select Front, Back, Left, and Right views, and `5` selects Full body.
 
+Layer status reports loaded, visible, and failed structure counts. It also
+shows the reference and Z-Anatomy registration errors. Lazy-loaded muscles and
+nerves are counted only after their meshes have arrived.
+
 ## Run locally
 
-From the repository root, serve the project files with any static HTTP server.
-For example:
+From the repository root, serve the files with a static HTTP server:
 
 ```bash
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000/web/`. The server must also serve the top-level
-`assets/anatomy/` directory because the viewer fetches its models from
-`/assets/anatomy/`. A direct `file://` URL will not work because browser module
-and model requests require HTTP.
+Open `http://localhost:8000/web/`. The server must also expose the top-level
+`assets/anatomy/` directory. `file://` URLs do not support the module and
+asset requests used by the viewer. Three.js 0.160.0 and its Draco decoder are
+vendored under `web/vendor/three/`; the viewer does not request them from a
+CDN.
 
-## Regenerate organ assets
+## Browser acceptance checks
 
-The organ exporter requires these upstream files under `evidence/z-anatomy/`:
+With Python Playwright and its Chromium browser installed, capture the twelve
+1920 × 1080 layer and close-up views, four responsive viewport checks, browser
+console status, registration values, and centroid comparisons with:
 
-- `VisceralSystem100.fbx`
-- `CardioVascular41.fbx`
-- `LymphoidOrgans100.fbx`
+```bash
+python scripts/capture_web_acceptance.py
+```
 
-Download them from the Z-Anatomy PC-Version FBX model directory linked in
-[`ATTRIBUTION.md`](ATTRIBUTION.md). They are ignored by Git and are only needed
-to regenerate the committed `assets/anatomy/organs.glb`. Run:
+Images and JSON measurements are written to `docs/acceptance/`. The capture
+waits for all 70 named structures and checks that each structure's world
+centroid remains within 1 mm across views.
+
+## Regenerate anatomy assets
+
+The Z-Anatomy source FBXs listed in [`ATTRIBUTION.md`](ATTRIBUTION.md) are
+ignored by Git and belong under `evidence/z-anatomy/`. With Blender installed,
+run the exporters from the repository root:
 
 ```bash
 blender --background --python scripts/export_z_anatomy_organs.py
-```
-
-The exporter checks that every named source mesh exists and that each final
-organ is at or below 60,000 triangles. The GLB is Draco-compressed. Its
-Z-Anatomy-derived content is licensed CC BY-SA 4.0; see
-[`ATTRIBUTION.md`](ATTRIBUTION.md).
-
-## Regenerate muscle assets
-
-The muscle exporter additionally requires `MuscularSystem100.fbx` from the
-same upstream directory in `evidence/z-anatomy/`. It groups the major source
-muscles into 28 selectable left/right structures and writes
-`assets/anatomy/muscles.glb`:
-
-```bash
 blender --background --python scripts/export_z_anatomy_muscles.py
-```
-
-The exporter enforces a 400,000-triangle total budget and Draco-compresses the
-GLB. The browser only requests this asset when the muscle layer is first shown.
-The source FBX is ignored by Git; licensing and attribution are in
-[`ATTRIBUTION.md`](ATTRIBUTION.md).
-
-## Regenerate nerve assets
-
-The nerve exporter requires `NervousSystem100.fbx` from the same upstream
-directory in `evidence/z-anatomy/`. It groups the brain, spinal cord, cranial
-nerves, and paired brachial, lumbar, sacral, and sciatic structures into
-`assets/anatomy/nerves.glb`:
-
-```bash
 blender --background --python scripts/export_z_anatomy_nerves.py
 ```
 
-The exporter enforces a 400,000-triangle total budget and Draco-compresses the
-GLB. The browser only requests it when the nerve layer is first shown. The
-brain is centered to the named skull landmark; the other structures retain
-their shared landmark registration to the scan. The source FBX is ignored by
-Git; licensing and attribution are in
-[`ATTRIBUTION.md`](ATTRIBUTION.md).
+The organ exporter caps each organ at 60,000 triangles. Muscle and nerve assets
+are each capped at 400,000 triangles and use Draco compression. Preserve
+Z-Anatomy CC BY-SA 4.0 attribution when redistributing these adaptations.
+
+The prepared skeleton GLB is rebuilt from the cleaned PLY with:
+
+```bash
+python scripts/export_web_anatomy.py
+```
+
+This exporter leaves the PLY and supplied Blender evidence untouched.
 
 ## Deploy
 
-The Render Blueprint and Vercel configuration copy the anatomy files into the
-web publish directory during deployment, including the lazy-loaded
-`muscles.glb` and `nerves.glb`.
-Connect either service to the desired Git branch; pushes to that branch trigger
-updates. The viewer loads Three.js,
-the Draco decoder, and fonts from public CDNs, so browsers need network access
-to those hosts.
-
-To rebuild the compressed skeleton export after changing the Blender source,
-run the export script with Blender in background mode:
-
-```bash
-blender --background evidence/mediview_anatomy.blend --python scripts/export_web_anatomy.py
-```
-
-The exporter does not modify or save over the source `.blend` file.
+The Render Blueprint and Vercel configuration publish the browser viewer and
+copy all anatomy assets into the web output. Connect the desired Git branch;
+pushes to that branch trigger a deployment. The C++ desktop application stays
+a separate application target.

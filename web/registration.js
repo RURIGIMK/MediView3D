@@ -173,26 +173,82 @@ function nearestScanPoint(samples, point) {
   };
 }
 
-function fitAffine(pairs) {
-  const axes = ['x', 'y', 'z'].map((axis) => {
-    const sourceMean = pairs.reduce((sum, pair) => sum + pair.source[axis], 0) / pairs.length;
-    const targetMean = pairs.reduce((sum, pair) => sum + pair.target[axis], 0) / pairs.length;
-    let covariance = 0;
-    let variance = 0;
-    for (const { source, target } of pairs) {
-      covariance += (source[axis] - sourceMean) * (target[axis] - targetMean);
-      variance += (source[axis] - sourceMean) ** 2;
+function largestEigenvector(matrix) {
+  const values = matrix.map((row) => [...row]);
+  const vectors = Array.from({ length: 4 }, (_, row) => Array.from({ length: 4 }, (_, column) => Number(row === column)));
+  for (let iteration = 0; iteration < 64; iteration++) {
+    let p = 0;
+    let q = 1;
+    for (let row = 0; row < 4; row++) {
+      for (let column = row + 1; column < 4; column++) {
+        if (Math.abs(values[row][column]) > Math.abs(values[p][q])) [p, q] = [row, column];
+      }
     }
-    if (variance < 1e-8) throw new Error(`Anatomy landmarks do not span the ${axis.toUpperCase()} axis.`);
-    const scale = covariance / variance;
-    return { scale, translation: targetMean - scale * sourceMean };
-  });
-  return new THREE.Matrix4().set(
-    axes[0].scale, 0, 0, axes[0].translation,
-    0, axes[1].scale, 0, axes[1].translation,
-    0, 0, axes[2].scale, axes[2].translation,
-    0, 0, 0, 1,
-  );
+    if (Math.abs(values[p][q]) < 1e-12) break;
+    const angle = 0.5 * Math.atan2(2 * values[p][q], values[q][q] - values[p][p]);
+    const cosine = Math.cos(angle);
+    const sine = Math.sin(angle);
+    const pp = values[p][p];
+    const qq = values[q][q];
+    const pq = values[p][q];
+    values[p][p] = cosine * cosine * pp - 2 * sine * cosine * pq + sine * sine * qq;
+    values[q][q] = sine * sine * pp + 2 * sine * cosine * pq + cosine * cosine * qq;
+    values[p][q] = values[q][p] = 0;
+    for (let index = 0; index < 4; index++) {
+      if (index === p || index === q) continue;
+      const ip = values[index][p];
+      const iq = values[index][q];
+      values[index][p] = values[p][index] = cosine * ip - sine * iq;
+      values[index][q] = values[q][index] = sine * ip + cosine * iq;
+    }
+    for (let row = 0; row < 4; row++) {
+      const vp = vectors[row][p];
+      const vq = vectors[row][q];
+      vectors[row][p] = cosine * vp - sine * vq;
+      vectors[row][q] = sine * vp + cosine * vq;
+    }
+  }
+  let largest = 0;
+  for (let index = 1; index < 4; index++) if (values[index][index] > values[largest][largest]) largest = index;
+  return vectors.map((row) => row[largest]);
+}
+
+function fitSimilarity(pairs) {
+  if (pairs.length < 3) throw new Error('At least three anatomy landmarks are required for registration.');
+  const sourceMean = new THREE.Vector3();
+  const targetMean = new THREE.Vector3();
+  for (const pair of pairs) {
+    sourceMean.add(pair.source);
+    targetMean.add(pair.target);
+  }
+  sourceMean.multiplyScalar(1 / pairs.length);
+  targetMean.multiplyScalar(1 / pairs.length);
+  const covariance = Array.from({ length: 3 }, () => [0, 0, 0]);
+  let sourceVariance = 0;
+  for (const { source, target } of pairs) {
+    const a = source.clone().sub(sourceMean).toArray();
+    const b = target.clone().sub(targetMean).toArray();
+    sourceVariance += a.reduce((sum, value) => sum + value * value, 0);
+    for (let row = 0; row < 3; row++) for (let column = 0; column < 3; column++) covariance[row][column] += a[row] * b[column];
+  }
+  if (sourceVariance < 1e-8) throw new Error('Anatomy landmarks do not span a measurable volume.');
+  const [xx, xy, xz] = covariance[0];
+  const [yx, yy, yz] = covariance[1];
+  const [zx, zy, zz] = covariance[2];
+  const trace = xx + yy + zz;
+  const quaternionValues = largestEigenvector([
+    [trace, yz - zy, zx - xz, xy - yx],
+    [yz - zy, xx - yy - zz, xy + yx, zx + xz],
+    [zx - xz, xy + yx, -xx + yy - zz, yz + zy],
+    [xy - yx, zx + xz, yz + zy, -xx - yy + zz],
+  ]);
+  const rotation = new THREE.Quaternion(quaternionValues[1], quaternionValues[2], quaternionValues[3], quaternionValues[0]).normalize();
+  let scaleNumerator = 0;
+  for (const { source, target } of pairs) scaleNumerator += target.clone().sub(targetMean).dot(source.clone().sub(sourceMean).applyQuaternion(rotation));
+  const scale = scaleNumerator / sourceVariance;
+  if (!Number.isFinite(scale) || scale <= 0) throw new Error('Anatomy landmarks produced an invalid similarity scale.');
+  const translation = targetMean.clone().sub(sourceMean.clone().applyQuaternion(rotation).multiplyScalar(scale));
+  return new THREE.Matrix4().compose(translation, rotation, new THREE.Vector3(scale, scale, scale));
 }
 
 function makePairs(referenceRoot, scanRoot, coarseTransform) {
@@ -221,13 +277,19 @@ export function registerReferenceToScan(referenceRoot, scanRoot) {
 
   const measured = makePairs(referenceRoot, scanRoot, seed);
   let pairs = measured.pairs;
-  let matrix = fitAffine(pairs);
-  let errors = pairs.map(({ source, target }) => source.clone().applyMatrix4(matrix).distanceTo(target));
-  const medianError = [...errors].sort((a, b) => a - b)[Math.floor(errors.length / 2)];
-  const inliers = pairs.filter((_, index) => errors[index] <= Math.max(0.035, medianError * 2.5));
-  if (inliers.length >= 6 && inliers.length < pairs.length) {
-    pairs = inliers;
-    matrix = fitAffine(pairs);
+  let matrix = fitSimilarity(pairs);
+  let inliers = [...pairs];
+  let errors = inliers.map(({ source, target }) => source.clone().applyMatrix4(matrix).distanceTo(target));
+  for (let iteration = 0; iteration < 3; iteration++) {
+    const median = [...errors].sort((a, b) => a - b)[Math.floor(errors.length / 2)];
+    const deviations = errors.map((error) => Math.abs(error - median)).sort((a, b) => a - b);
+    const mad = deviations[Math.floor(deviations.length / 2)];
+    const threshold = Math.max(0.03, median + 2.5 * mad);
+    const nextInliers = pairs.filter((_, index) => errors[index] <= threshold);
+    if (nextInliers.length < 5 || nextInliers.length === pairs.length) break;
+    pairs = nextInliers;
+    inliers = nextInliers;
+    matrix = fitSimilarity(pairs);
     errors = pairs.map(({ source, target }) => source.clone().applyMatrix4(matrix).distanceTo(target));
   }
 
@@ -241,7 +303,45 @@ export function registerReferenceToScan(referenceRoot, scanRoot) {
     matrix,
     rmsError,
     maxError,
-    landmarks: pairs.map((pair, index) => ({ name: pair.name, error: errors[index] })),
+    landmarks: measured.pairs.map((pair) => ({ name: pair.name, error: pair.source.clone().applyMatrix4(matrix).distanceTo(pair.target), seedError: pair.seedDistance, inlier: inliers.includes(pair) })),
     scanDepthProfile: measured.depthProfile,
+  };
+}
+
+export function registerZAnatomyFrameToScan(atlasRoots, scanRoot, referenceRegistration) {
+  if (!atlasRoots?.length || !scanRoot || !referenceRegistration?.matrix) throw new Error('The Z-Anatomy frame needs source structures, the skeleton scan, and the registered scan orientation.');
+  const sourceBounds = new THREE.Box3();
+  for (const root of atlasRoots) sourceBounds.union(new THREE.Box3().setFromObject(root));
+  const targetBounds = new THREE.Box3().setFromObject(scanRoot);
+  if (sourceBounds.isEmpty() || targetBounds.isEmpty()) throw new Error('The anatomy frame bounds are incomplete.');
+
+  // Z-Anatomy FBX exports use a shared metre-based, Y-up world: the standing
+  // model runs from floor y=0 to skull top y=1.78 m. The scan is centered at
+  // the origin, so its measured height supplies a uniform scale.
+  const sourceStandingHeight = 1.78;
+  const targetHeight = targetBounds.getSize(new THREE.Vector3()).y;
+  const scale = targetHeight / sourceStandingHeight;
+  const sourceCenter = sourceBounds.getCenter(new THREE.Vector3());
+  sourceCenter.y = sourceStandingHeight * 0.5;
+  const targetCenter = targetBounds.getCenter(new THREE.Vector3());
+  const rotation = new THREE.Quaternion();
+  referenceRegistration.matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
+  const translation = targetCenter.clone().sub(sourceCenter.clone().applyQuaternion(rotation).multiplyScalar(scale));
+  const matrix = new THREE.Matrix4().compose(translation, rotation, new THREE.Vector3(scale, scale, scale));
+  const landmarks = [
+    { name: 'Z-Anatomy floor', source: new THREE.Vector3(sourceCenter.x, 0, sourceCenter.z), target: new THREE.Vector3(targetCenter.x, targetBounds.min.y, targetCenter.z) },
+    { name: 'Z-Anatomy skull top', source: new THREE.Vector3(sourceCenter.x, sourceStandingHeight, sourceCenter.z), target: new THREE.Vector3(targetCenter.x, targetBounds.max.y, targetCenter.z) },
+    { name: 'Z-Anatomy midline', source: sourceCenter.clone(), target: targetCenter },
+  ];
+  const errors = landmarks.map(({ source, target }) => source.clone().applyMatrix4(matrix).distanceTo(target));
+  return {
+    matrix,
+    scale,
+    sourceHeight: sourceStandingHeight,
+    targetHeight,
+    rmsError: Math.sqrt(errors.reduce((sum, error) => sum + error * error, 0) / errors.length),
+    maxError: Math.max(...errors),
+    landmarks: landmarks.map((landmark, index) => ({ name: landmark.name, error: errors[index] })),
+    method: 'measured scan height and documented Z-Anatomy standing-frame landmarks; common Y-up orientation',
   };
 }

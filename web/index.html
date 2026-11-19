@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#080d14" />
     <title>MediView 3D | Anatomy Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
     <script type="importmap">
-      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+      {"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}
     </script>
   </head>
   <body>
@@ -22,10 +19,12 @@
     </header>
 
     <aside class="panel anatomy-panel">
-      <div class="panel-heading"><div><p class="eyebrow">MODEL EXPLORER</p><h1>Anatomy</h1></div><span id="structure-count" class="count">—</span></div>
+      <div class="panel-heading"><div><p class="eyebrow">MODEL EXPLORER</p><h1>Anatomy</h1></div><span id="structure-count" class="count">—</span><button id="explorer-collapse" class="icon-button small panel-collapse" type="button" aria-expanded="true" aria-label="Collapse model explorer">−</button></div>
       <label class="search-box"><span aria-hidden="true">⌕</span><input id="structure-search" type="search" placeholder="Search anatomy" autocomplete="off" aria-label="Search anatomical structures" /><kbd>/</kbd></label>
       <div class="system-title"><span>ANATOMY LAYERS</span><button id="reset-layers" class="text-button">Reset</button></div>
+      <label class="mode-control" for="anatomy-mode"><span>VIEW MODE</span><select id="anatomy-mode" aria-label="Anatomy view mode"><option value="complete">Complete</option><option value="muscular">Muscular</option><option value="skeletal">Skeletal</option><option value="organs">Internal organs</option><option value="nervous">Nervous</option><option value="cardiovascular">Cardiovascular</option><option value="transparent-muscle">Transparent muscle</option><option value="transparent-skin" disabled title="No skin model is included">Transparent skin · unavailable</option><option value="deep">Deep anatomy</option><option value="custom" hidden>Custom layers</option></select></label>
       <div id="layer-list" class="layer-list" aria-label="Anatomy layer visibility"></div>
+      <p id="mode-note" class="mode-note">No skin mesh is included. Muscles are grouped without separate superficial and deep layers.</p>
       <div id="muscle-opacity-control" class="layer-opacity" hidden>
         <label class="opacity-label" for="muscle-opacity-slider"><span>Muscle layer opacity</span><output id="muscle-opacity-value">100%</output></label>
         <input id="muscle-opacity-slider" class="range" type="range" min="15" max="100" value="100" />
@@ -41,7 +40,7 @@
     </aside>
 
     <aside class="panel info-panel">
-      <div class="info-heading"><span class="eyebrow">STRUCTURE DETAILS</span><button id="clear-selection" class="icon-button small" title="Clear selection" aria-label="Clear selection">×</button></div>
+      <div class="info-heading"><span class="eyebrow">STRUCTURE DETAILS</span><span class="info-actions"><button id="clear-selection" class="icon-button small" title="Clear selection" aria-label="Clear selection">×</button><button id="details-collapse" class="icon-button small panel-collapse" type="button" aria-expanded="true" aria-label="Collapse structure details">−</button></span></div>
       <div id="empty-info" class="empty-info"><span class="info-glyph">✳</span><b>Select a structure</b><p>Choose an anatomical structure in the model or browser to explore its details.</p></div>
       <div id="structure-info" class="structure-info" hidden>
         <span id="info-system" class="system-chip"></span>
@@ -67,6 +66,7 @@
     <div class="action-toolbar panel">
       <button id="measure" class="tool-button" title="Measure distance between two points">⌁ <span>Measure</span></button>
       <button id="labels" class="tool-button selected" title="Show labels for selected or hovered structures">Aa <span>Labels</span></button>
+      <button id="cutaway" class="tool-button" title="Toggle anterior cutaway" aria-pressed="false">◒ <span>Cutaway</span></button>
       <span class="toolbar-separator"></span>
       <button id="guided-tour" class="tool-button tour-button">▷ <span>Guided tour</span></button>
       <button id="screenshot" class="tool-button" title="Save a screenshot">▧ <span>Capture</span></button>

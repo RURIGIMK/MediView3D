@@ -16,7 +16,7 @@ export function loadNerveStructures() {
   if (loadPromise) return loadPromise;
 
   const draco = new DRACOLoader();
-  draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+  draco.setDecoderPath('/web/vendor/three/examples/jsm/libs/draco/');
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
   loadPromise = loader.loadAsync('/assets/anatomy/nerves.glb')
@@ -45,7 +45,6 @@ export function loadNerveStructures() {
           object.userData.structureKey = root.name;
         });
         root.userData.structureKey = root.name;
-        root.userData.landmarkRegistered = true;
       }
       return roots;
     })

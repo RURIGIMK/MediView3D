@@ -57,3 +57,27 @@ body.interface-hidden .interface-toggle{border-color:#8fa4b755;background:rgba(8
 @media(max-width:650px){.top-context{display:none}.view-toolbar{left:auto;right:8px;top:auto;bottom:66px;transform:none}.header-actions{gap:4px}.header-button{height:30px;padding:0 6px;font-size:8px}.button-full{display:none}.button-compact{display:inline}.layer-copy>span{font-size:9px}.layer-copy small{font-size:6px}.system-details summary{padding:7px 2px}.anatomy-label{max-width:105px;font-size:7px}}
 .attribution-link{color:inherit;text-decoration:none}.attribution-link:hover{text-decoration:underline;color:#d7e3ed}
  .layer-opacity{padding:9px 1px 3px;border-bottom:1px solid var(--line)}.layer-opacity .opacity-label{font-size:8px}.layer-opacity .range{margin:8px 0 1px}.layer-button:disabled:not(.coming-soon){cursor:progress;opacity:.72}
+.mode-control{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;margin:9px 0 3px;color:#91a2b4;font-size:8px;font-weight:700;letter-spacing:.12em}
+.mode-control select{width:100%;min-width:0;height:30px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:#101923;color:var(--text);font-size:10px;letter-spacing:0}
+.mode-control select:focus-visible{outline:2px solid #51d8bb;outline-offset:2px}
+.mode-note{margin:3px 0 0;color:#8091a3;font-size:8px;line-height:1.35}
+.load-state{align-items:flex-start;line-height:1.35;overflow-wrap:anywhere}
+.load-state .spinner{flex:none;margin-top:2px}
+.load-state:not(.loading) .spinner{display:none}
+.tool-button[aria-pressed=true]{border-color:#51d8bb66;background:#51d8bb16;color:#8df3d8}
+@media(max-width:650px){.mode-control{gap:6px;margin-top:7px}.mode-control select{height:28px;font-size:9px}.mode-note{font-size:7px}.load-state{font-size:8px}}
+.panel-collapse{display:none}
+.info-actions{display:flex;gap:6px;align-items:center}
+@media(max-width:650px){
+  .anatomy-panel{width:min(45vw,205px);padding:10px}
+  .info-panel{width:min(45vw,205px);max-height:45vh;padding:10px}
+  .panel-collapse{display:grid;width:25px;height:25px;font-size:14px}
+  .panel-heading{position:relative;min-height:28px;margin-bottom:8px}
+  .panel-heading .count{margin-right:30px}
+  #explorer-collapse{position:absolute;right:0;top:0}
+  .anatomy-panel.panel-collapsed,.info-panel.panel-collapsed{height:44px;min-height:44px;bottom:auto;overflow:hidden}
+  .anatomy-panel.panel-collapsed .panel-heading{margin:0}
+  .anatomy-panel.panel-collapsed>.panel-heading~*,.info-panel.panel-collapsed>.info-heading~*{display:none!important}
+  .info-heading{min-height:25px}
+  #details-collapse{font-size:14px}
+}

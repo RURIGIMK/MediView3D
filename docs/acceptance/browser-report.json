@@ -1,0 +1,323 @@
+{
+  "status": "Loaded: 70/70 \u00b7 Visible: 40 \u00b7 Failed: 0 \u00b7 Reference RMS 20, max 25 mm \u00b7 Z-Anatomy RMS 20, max 25 mm \u00b7 Artec scan CC BY 3.0",
+  "registration": {
+    "rmsMm": 19.617477663088923,
+    "maxMm": 25.051396888140474,
+    "landmarks": [
+      {
+        "name": "Skull_Cranium",
+        "error": 0.022296411898354795,
+        "seedError": 0.0025060533760987483,
+        "inlier": true,
+        "errorMm": 22.296411898354794
+      },
+      {
+        "name": "Clavicle_L",
+        "error": 0.06774665805372332,
+        "seedError": 0.07290838127740144,
+        "inlier": false,
+        "errorMm": 67.74665805372332
+      },
+      {
+        "name": "Clavicle_R",
+        "error": 0.053122959080506384,
+        "seedError": 0.05949400565513434,
+        "inlier": false,
+        "errorMm": 53.122959080506384
+      },
+      {
+        "name": "Sternum",
+        "error": 0.025051396888140474,
+        "seedError": 0.040385573995443,
+        "inlier": true,
+        "errorMm": 25.051396888140474
+      },
+      {
+        "name": "Pelvis_Center",
+        "error": 0.11403343578270915,
+        "seedError": 0.10868103278255296,
+        "inlier": false,
+        "errorMm": 114.03343578270915
+      },
+      {
+        "name": "Patella_L",
+        "error": 0.018843043476018072,
+        "seedError": 0.015510495613574458,
+        "inlier": true,
+        "errorMm": 18.84304347601807
+      },
+      {
+        "name": "Patella_R",
+        "error": 0.012884150805910348,
+        "seedError": 0.03797960101308521,
+        "inlier": true,
+        "errorMm": 12.884150805910348
+      },
+      {
+        "name": "Tibia_L",
+        "error": 0.01051513692562266,
+        "seedError": 0.03143672580009564,
+        "inlier": true,
+        "errorMm": 10.51513692562266
+      },
+      {
+        "name": "Tibia_R",
+        "error": 0.02351043120806985,
+        "seedError": 0.055549540467986235,
+        "inlier": true,
+        "errorMm": 23.51043120806985
+      }
+    ],
+    "matrix": [
+      0.8263538313939662,
+      -0.022033164863774823,
+      0.02646774101920987,
+      0,
+      0.02171911493260093,
+      0.8267240528700159,
+      0.010113198345797523,
+      0,
+      -0.026726049373574045,
+      -0.009409377254775635,
+      0.8265856508751047,
+      0,
+      -0.032892029056339395,
+      -0.6722725849882318,
+      0.0010783296882333274,
+      1
+    ]
+  },
+  "atlas_frame": {
+    "scale": 0.9623576081200932,
+    "rmsMm": 20.259945706724338,
+    "maxMm": 24.813264598982677,
+    "landmarks": [
+      {
+        "name": "Z-Anatomy floor",
+        "error": 0.024813264598982678
+      },
+      {
+        "name": "Z-Anatomy skull top",
+        "error": 0.024813264598982674
+      },
+      {
+        "name": "Z-Anatomy midline",
+        "error": 1.734723475976807e-18
+      }
+    ],
+    "method": "measured scan height and documented Z-Anatomy standing-frame landmarks; common Y-up orientation",
+    "matrix": [
+      0.9615229772729588,
+      -0.025637194956578502,
+      0.030797147879801205,
+      0,
+      0.025271774947179738,
+      0.961953756973346,
+      0.011767444179208044,
+      0,
+      -0.031097708497428822,
+      -0.010948496985891008,
+      0.9617927161538424,
+      0,
+      -0.02255054126951808,
+      -0.856159504642634,
+      -0.008660509493896436,
+      1
+    ]
+  },
+  "structure_count": 70,
+  "layer_states": [
+    {
+      "id": "skeleton",
+      "loaded": true,
+      "loading": null,
+      "failed": false,
+      "visible": true,
+      "opacity": null
+    },
+    {
+      "id": "organs",
+      "loaded": true,
+      "loading": null,
+      "failed": false,
+      "visible": false,
+      "opacity": null
+    },
+    {
+      "id": "vessels",
+      "loaded": true,
+      "loading": null,
+      "failed": false,
+      "visible": false,
+      "opacity": null
+    },
+    {
+      "id": "muscles",
+      "loaded": true,
+      "loading": false,
+      "failed": false,
+      "visible": true,
+      "opacity": 0.4
+    },
+    {
+      "id": "nerves",
+      "loaded": true,
+      "loading": false,
+      "failed": false,
+      "visible": true,
+      "opacity": null
+    }
+  ],
+  "centroid_consistency": {
+    "2": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "3": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "4": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "5": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "6": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "7": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "8": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "9": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "10": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "11": {
+      "max_m": 0.0,
+      "pass": true
+    },
+    "12": {
+      "max_m": 0.0,
+      "pass": true
+    }
+  },
+  "screenshots": [
+    "docs/acceptance/01-skeleton-only.png",
+    "docs/acceptance/02-muscles-only.png",
+    "docs/acceptance/03-skeleton-and-muscles.png",
+    "docs/acceptance/04-nervous-only.png",
+    "docs/acceptance/05-internal-organs-only.png",
+    "docs/acceptance/06-skeleton-muscles-organs.png",
+    "docs/acceptance/07-all-systems.png",
+    "docs/acceptance/08-transparent-muscle-with-organs.png",
+    "docs/acceptance/09-head-and-brain-closeup.png",
+    "docs/acceptance/10-heart-and-lungs-closeup.png",
+    "docs/acceptance/11-pelvis-closeup.png",
+    "docs/acceptance/12-arm-nerves-and-muscles-closeup.png"
+  ],
+  "responsive": [
+    {
+      "viewport": [
+        1920,
+        1080
+      ],
+      "pageOverflow": false,
+      "panelsOverlap": false,
+      "leftPanel": [
+        16,
+        84,
+        316,
+        996
+      ],
+      "rightPanel": [
+        1604,
+        84,
+        1904,
+        996
+      ],
+      "status": "Loaded: 70/70 \u00b7 Visible: 40 \u00b7 Failed: 0 \u00b7 Reference RMS 20, max 25 mm \u00b7 Z-Anatomy RMS 20, max 25 mm \u00b7 Artec scan CC BY 3.0",
+      "mode": "complete"
+    },
+    {
+      "viewport": [
+        1366,
+        768
+      ],
+      "pageOverflow": false,
+      "panelsOverlap": false,
+      "leftPanel": [
+        16,
+        84,
+        316,
+        684
+      ],
+      "rightPanel": [
+        1050,
+        84,
+        1350,
+        684
+      ],
+      "status": "Loaded: 70/70 \u00b7 Visible: 40 \u00b7 Failed: 0 \u00b7 Reference RMS 20, max 25 mm \u00b7 Z-Anatomy RMS 20, max 25 mm \u00b7 Artec scan CC BY 3.0",
+      "mode": "complete"
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "pageOverflow": false,
+      "panelsOverlap": false,
+      "leftPanel": [
+        16,
+        84,
+        316,
+        684
+      ],
+      "rightPanel": [
+        708,
+        84,
+        1008,
+        684
+      ],
+      "status": "Loaded: 70/70 \u00b7 Visible: 40 \u00b7 Failed: 0 \u00b7 Reference RMS 20, max 25 mm \u00b7 Z-Anatomy RMS 20, max 25 mm \u00b7 Artec scan CC BY 3.0",
+      "mode": "complete"
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "pageOverflow": false,
+      "panelsOverlap": false,
+      "leftPanel": [
+        8,
+        64,
+        183.5,
+        778
+      ],
+      "rightPanel": [
+        206.5,
+        399.203125,
+        382,
+        779
+      ],
+      "status": "Loaded: 70/70 \u00b7 Visible: 40 \u00b7 Failed: 0 \u00b7 Reference RMS 20, max 25 mm \u00b7 Z-Anatomy RMS 20, max 25 mm \u00b7 Artec scan CC BY 3.0",
+      "mode": "complete"
+    }
+  ],
+  "console_errors": [],
+  "failed_requests": []
+}

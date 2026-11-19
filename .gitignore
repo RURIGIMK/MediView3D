@@ -10,3 +10,4 @@
 *.dylib
 evidence/z-anatomy/*.fbx
 .DS_Store
+evidence/blender-*/
